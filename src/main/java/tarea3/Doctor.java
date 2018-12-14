@@ -1,19 +1,6 @@
 package tarea3;
 
-import java.util.List;
-import com.google.gson.annotations.Expose;
-
-public class Doctor{
-	@Expose
-	public int id;
-	@Expose
-	public String nombre;
-	@Expose
-	public String apellido;
-	@Expose
-	public int estudios;
-	@Expose
-	public int experiencia;
+public class Doctor extends Empleado{
 	
 	public boolean coordinador = false;
 	
@@ -23,5 +10,9 @@ public class Doctor{
 	
 	public boolean esCoordinador(){
 		return coordinador;
+	}
+	
+	public String toString(){
+		return String.format("Doctor[%02d]: %s %s (estudios: %2d, exp: %2d)", this.id, this.nombre, this.apellido, this.estudios, this.experiencia);
 	}
 }

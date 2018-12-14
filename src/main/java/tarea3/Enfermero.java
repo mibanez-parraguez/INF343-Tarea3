@@ -1,17 +1,7 @@
 package tarea3;
 
-import java.util.List;
-import com.google.gson.annotations.Expose;
-
-public class Enfermero{
-	@Expose
-	public int id;
-	@Expose
-	public String nombre;
-	@Expose
-	public String apellido;
-	@Expose
-	public int estudios;
-	@Expose
-	public int experiencia;
+public class Enfermero extends Empleado{
+	public String toString(){
+		return String.format("Enfermero[%02d]: %s %s (estudios: %2d, exp: %2d)", this.id, this.nombre, this.apellido, this.estudios, this.experiencia);
+	}
 } 

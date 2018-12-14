@@ -52,5 +52,5 @@ public class Paciente {
 	public Drugs[] medicamentos;
 	
 	// No exposed =P
-	public bool locked;
+	public boolean locked;
 }
