@@ -1,11 +1,21 @@
 # test folder
 pruebas/
 
+# Temp files
+*.kate-swp
+*.log
+
+# Gradle
+.gradle
+build
+gradle-app.setting
+.gradletasknamecache
+
+# Gradle - avoid ignoring gradle wrapper
+!gradle-wrapper.jar
+
 # Compiled class file
 *.class
-
-# Log file
-*.log
 
 # BlueJ files
 *.ctxt
@@ -22,5 +32,12 @@ pruebas/
 *.tar.gz
 *.rar
 
+# Executables
+*.exe
+*.out
+*.app
+
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
+
+
