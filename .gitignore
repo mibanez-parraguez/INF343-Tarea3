@@ -11,9 +11,6 @@ build
 gradle-app.setting
 .gradletasknamecache
 
-# Gradle - avoid ignoring gradle wrapper
-!gradle-wrapper.jar
-
 # Compiled class file
 *.class
 
@@ -40,4 +37,6 @@ gradle-app.setting
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
 
+# Gradle - avoid ignoring gradle wrapper
+!gradle-wrapper.jar
 
