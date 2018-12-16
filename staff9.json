@@ -9,13 +9,25 @@
 		{"id": 2,
 		"nombre": "Juan", 
 		"apellido": "Alvarado", 
-		"estudios": 10, 
+		"estudios": 17, 
 		"experiencia": 2
 		},
 		{"id": 3,
 		"nombre": "Francisca", 
 		"apellido": "Rodriguez", 
 		"estudios": 15, 
+		"experiencia": 6
+		},
+		{"id": 4,
+		"nombre": "Marta", 
+		"apellido": "Dominga", 
+		"estudios": 15, 
+		"experiencia": 6
+		},
+		{"id": 5,
+		"nombre": "Megaman", 
+		"apellido": "Gonzalez", 
+		"estudios": 10, 
 		"experiencia": 6
 		}],
 

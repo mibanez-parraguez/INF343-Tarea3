@@ -1,22 +1,22 @@
 {
 	"Doctor": 
 		[{"id": 1,
-		"nombre": "Andrés", 
-		"apellido": "Tobar", 
-		"estudios": 10 , 
-		"experiencia": 3
+		"nombre": "Diego", 
+		"apellido": "Huenchumilla", 
+		"estudios": 12 , 
+		"experiencia": 4
 		}, 
 		{"id": 2,
-		"nombre": "Juan", 
-		"apellido": "Alvarado", 
-		"estudios": 10, 
-		"experiencia": 2
+		"nombre": "Salvador", 
+		"apellido": "Marambio", 
+		"estudios": 8, 
+		"experiencia": 5
 		},
 		{"id": 3,
-		"nombre": "Francisca", 
-		"apellido": "Rodriguez", 
-		"estudios": 15, 
-		"experiencia": 6
+		"nombre": "Ignacio", 
+		"apellido": "Toro", 
+		"estudios": 12, 
+		"experiencia": 10
 		}],
 
 	"Enfermero": 

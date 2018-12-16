@@ -1,24 +1,17 @@
 {
 	"Doctor": 
 		[{"id": 1,
-		"nombre": "Andrés", 
-		"apellido": "Tobar", 
-		"estudios": 10 , 
-		"experiencia": 3
+		"nombre": "Javier", 
+		"apellido": "Dominguesz", 
+		"estudios": 12 , 
+		"experiencia": 2
 		}, 
 		{"id": 2,
-		"nombre": "Juan", 
+		"nombre": "Juan2", 
 		"apellido": "Alvarado", 
 		"estudios": 10, 
 		"experiencia": 2
-		},
-		{"id": 3,
-		"nombre": "Francisca", 
-		"apellido": "Rodriguez", 
-		"estudios": 15, 
-		"experiencia": 6
-		}],
-
+		} ],
 	"Enfermero": 
 		[{"id": 1,
 		"nombre": "Alejandra", 

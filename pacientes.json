@@ -1,31 +1,111 @@
-[{"paciente_id": 1,
+[{
+	"paciente_id": 1,
 
-  "datos personales": 
+	"datos personales": 
+	[{
+		"nombre":"Pedro Picapiedras",
+		"rut":"00.000.000-0",
+		"edad":"44"
+	}],
 
-      [{
+	"enfermedades": 
+		["arritmia", "diabetes"],
 
-        "nombre":"Pedro Picapiedras",
+	"tratamientos/procedimientos":
+		[{"asignados": ["quimioterapia"]}, {"completados" :["cateter"]}],
 
-        "rut":"00.000.000-0",
+	"examenes": 
+		[{"realizados": ["tomografia"]}, {"no realizados" :["ecografia"]}],
 
-        "edad":"44"
+	"medicamentos":
+		[{"recetados": ["metformina"]}, {"suministrados" :["paracetamol"]}]
+},
+{
+	"paciente_id": 2,
 
-      }],
+	"datos personales": 
+	[{
+		"nombre":"Pedro Picapiedras",
+		"rut":"00.000.000-0",
+		"edad":"44"
+	}],
 
-  "enfermedades": 
+	"enfermedades": 
+		["arritmia", "diabetes"],
 
-      ["arritmia", "diabetes"],
+	"tratamientos/procedimientos":
+		[{"asignados": ["quimioterapia"]}, {"completados" :["cateter"]}],
 
-  "tratamientos/procedimientos":
+	"examenes": 
+		[{"realizados": ["tomografia"]}, {"no realizados" :["ecografia"]}],
 
-      [{"asignados": ["quimioterapia"]}, {"completados" :["cateter"]}],
+	"medicamentos":
+		[{"recetados": ["metformina"]}, {"suministrados" :["paracetamol"]}]
+},
+{
+	"paciente_id": 3,
 
-  "examenes": 
+	"datos personales": 
+	[{
+		"nombre":"Pedro Picapiedras",
+		"rut":"00.000.000-0",
+		"edad":"44"
+	}],
 
-    [{"realizados": ["tomografia"]}, {"no realizados" :["ecografia"]}],
+	"enfermedades": 
+		["arritmia", "diabetes"],
 
-  "medicamentos":
+	"tratamientos/procedimientos":
+		[{"asignados": ["quimioterapia"]}, {"completados" :["cateter"]}],
 
-    [{"recetados": ["metformina"]}, {"suministrados" :["paracetamol"]}]
+	"examenes": 
+		[{"realizados": ["tomografia"]}, {"no realizados" :["ecografia"]}],
 
-}]
+	"medicamentos":
+		[{"recetados": ["metformina"]}, {"suministrados" :["paracetamol"]}]
+},
+{
+	"paciente_id": 4,
+
+	"datos personales": 
+	[{
+		"nombre":"Pedro Picapiedras",
+		"rut":"00.000.000-0",
+		"edad":"44"
+	}],
+
+	"enfermedades": 
+		["arritmia", "diabetes"],
+
+	"tratamientos/procedimientos":
+		[{"asignados": ["quimioterapia"]}, {"completados" :["cateter"]}],
+
+	"examenes": 
+		[{"realizados": ["tomografia"]}, {"no realizados" :["ecografia"]}],
+
+	"medicamentos":
+		[{"recetados": ["metformina"]}, {"suministrados" :["paracetamol"]}]
+},
+{
+	"paciente_id": 5,
+
+	"datos personales": 
+	[{
+		"nombre":"Pedro Picapiedras",
+		"rut":"00.000.000-0",
+		"edad":"44"
+	}],
+
+	"enfermedades": 
+		["arritmia", "diabetes"],
+
+	"tratamientos/procedimientos":
+		[{"asignados": ["quimioterapia"]}, {"completados" :["cateter"]}],
+
+	"examenes": 
+		[{"realizados": ["tomografia"]}, {"no realizados" :["ecografia"]}],
+
+	"medicamentos":
+		[{"recetados": ["metformina"]}, {"suministrados" :["paracetamol"]}]
+}
+]

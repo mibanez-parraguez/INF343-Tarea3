@@ -6,9 +6,19 @@
  * user guide available at https://docs.gradle.org/5.0/userguide/tutorial_java_projects.html
  */
 
+buildscript {
+	repositories {
+		mavenCentral()
+	}
+	dependencies {
+		classpath 'com.google.protobuf:protobuf-gradle-plugin:0.8.7'
+	}
+}
+
 plugins {
 	id 'java'
 	id 'application'
+	id 'com.google.protobuf' version "0.8.7"
 }
 
 repositories {
@@ -23,8 +33,30 @@ dependencies {
 	implementation 'com.google.guava:guava:26.0-jre'
 	// Use JUnit test framework
 	testImplementation 'junit:junit:4.12'
-	
-	implementation 'com.google.code.gson:gson:2.8.5' // JSON (gson)
+	// gson
+	implementation 'com.google.code.gson:gson:2.8.5'
+	// grpc
+	compile 'io.grpc:grpc-netty-shaded:1.17.1'
+	//compile 'io.grpc:grpc-netty:1.17.1'
+	compile 'io.grpc:grpc-protobuf:1.17.1'
+	compile 'io.grpc:grpc-stub:1.17.1'
+	compile 'com.google.protobuf:protobuf-java-util:3.5.1'
+}
+
+protobuf {
+	protoc {
+		artifact = 'com.google.protobuf:protoc:3.5.1-1'
+	}
+	plugins {
+		grpc {
+			artifact = 'io.grpc:protoc-gen-grpc-java:1.17.1'
+		}
+	}
+	generateProtoTasks {
+		all()*.plugins {
+			grpc {}
+		}
+	}
 }
 
 // Define the main class for the application
