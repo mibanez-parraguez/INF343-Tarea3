@@ -298,7 +298,7 @@ public class Hospital {
 		System.out.println("[5.2]" + pacientes[0].medicamentos[1].suministrados.get(0));
 		
 		
-		bufferedReader = new BufferedReader(new FileReader(STAFF_FILE+hospital.getId()+".json"));
+		bufferedReader = new BufferedReader(new FileReader(STAFF_FILE));
 		hospital.staff = new Gson().fromJson(bufferedReader, Staff.class);
 		bufferedReader.close();
 		
