@@ -1,0 +1,31 @@
+[{"paciente_id": 1,
+
+  "datos personales": 
+
+      [{
+
+        "nombre":"Pedro Picapiedras",
+
+        "rut":"00.000.000-0",
+
+        "edad":"44"
+
+      }],
+
+  "enfermedades": 
+
+      ["arritmia", "diabetes"],
+
+  "tratamientos/procedimientos":
+
+      [{"asignados": ["quimioterapia"]}, {"completados" :["cateter"]}],
+
+  "examenes": 
+
+    [{"realizados": ["tomografia"]}, {"no realizados" :["ecografia"]}],
+
+  "medicamentos":
+
+    [{"recetados": ["metformina"]}, {"suministrados" :["paracetamol"]}]
+
+}]
