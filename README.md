@@ -6,3 +6,9 @@ __Autores__
 * Miguel Ibáñez (2990010-8)
 
 ---
+
+* Para compilar (desde raíz): 
+`$ ./gradlew installDist`
+
+* Para ejecutar (raíz): 
+`$ ./build/install/tarea3/bin/tarea3`
