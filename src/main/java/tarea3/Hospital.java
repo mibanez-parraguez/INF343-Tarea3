@@ -29,8 +29,6 @@ import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.stub.StreamObserver;
 import io.grpc.StatusRuntimeException;
-import io.grpc.netty.NettyServerBuilder;
-import io.grpc.netty.NettyChannelBuilder;
 
 
 public class Hospital {
