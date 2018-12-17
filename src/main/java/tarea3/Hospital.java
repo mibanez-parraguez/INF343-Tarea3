@@ -35,8 +35,8 @@ import java.net.UnknownHostException;
 
 
 public class Hospital {
-	public static String PACIENTES_FILE = "pacientes";
-	public static String REQUERIM_FILE = "requerimientos";
+	public static String PACIENTES_FILE = "pacientes.json";
+	public static String REQUERIM_FILE = "requerimientos.json";
 	public static String STAFF_FILE = "staff";
 	public static String CONFIG_FILE = "configHospital";
 	public static final int BULLY = 1001;
@@ -48,8 +48,6 @@ public class Hospital {
 
 	Hospital(String hostname) throws IOException{
 		System.out.println("Creando Hospital...");
-		this.PACIENTES_FILE = "pacientes"+hostname+".json";
-		this.REQUERIM_FILE = "requerimientos"+hostname+".json";
 		this.STAFF_FILE = "staff"+hostname+".json";
 		this.CONFIG_FILE = "configHospital"+hostname+".json";
 		BufferedReader bufferedReader = new BufferedReader(new FileReader(CONFIG_FILE));
