@@ -29,7 +29,7 @@ message SolicitudMsg{
 		int32 experiencia = 3;
 		int32 estudios = 4;
 	}
-	
+
 	int32 id_hospital = 1;
 	int32 id_paciente = 2;
 	Empl empleado = 3;

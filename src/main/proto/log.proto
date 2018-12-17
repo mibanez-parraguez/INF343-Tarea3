@@ -11,10 +11,10 @@ message LogMsg{
 	string log =1;
 }
 
-message OkMsg{
+message LogOkMsg{
 	int32 ok = 1;
 }
 
 service LogHospital {
-	rpc IngresaLog(LogMsg) returns (OkMsg){}
-} 
+	rpc IngresaLog(LogMsg) returns (LogOkMsg){}
+}

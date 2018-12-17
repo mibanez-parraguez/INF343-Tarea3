@@ -403,7 +403,7 @@ class BullyClient implements Runnable {
 				public void onNext(OkMsg resp) {
 					if(resp.getOk()==1){ //si ok = 0, se considera como si no hubiese llegado respuesta.
 						logger.info("Llego respuesta OK");
-						finishLatch.countDown(); // TODO + 1 llamado? 
+						finishLatch.countDown(); // TODO + 1 llamado?
 					}
 				}
 				@Override
@@ -523,7 +523,7 @@ class BullyServer implements Runnable {
 					logger.info("Soy mejor, pero ya estoy en carrera");
 				}
 			}else{
-				OkMsg msg = OkMsg.newBuilder().setOk(0).build(); // Ok = 0, simula que no respondo. 
+				OkMsg msg = OkMsg.newBuilder().setOk(0).build(); // Ok = 0, simula que no respondo.
 				responseObserver.onNext(msg);
 				BullyServer.ctrl.abandonaEleccion();
 			}
