@@ -45,3 +45,7 @@ hs_err_pid*
 # Gradle - avoid ignoring gradle wrapper
 !gradle-wrapper.jar
 
+#Test
+configHospitalParalizis-PC.json
+requerimientosParalizis-PC.json
+staffParalizis-PC.json
