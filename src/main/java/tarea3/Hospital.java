@@ -40,6 +40,9 @@ public class Hospital {
 	public static String STAFF_FILE = "staff";
 	public static String CONFIG_FILE = "configHospital";
 	public static String hostname = "Unknown";
+	public static final String MULTICAST_ADDRESS = "228.1.2.3";
+	public static final int MULTICAST_PORT = 9876;
+	public static final int COORDINADOR_PORT = 6789;
 	public static final int BULLY = 1001;
 	public static final int LOG = 1002;
 
@@ -304,6 +307,24 @@ public class Hospital {
 			TimeUnit.SECONDS.sleep(36);
 			Hospital.ctrl.postulaEleccion();
 		}
+
+		// Thread que espera actualizaciones desde grupo multicast
+		LogThread lt_esperar_multi = new LogThread(MULTICAST_PORT, MULTICAST_ADDRESS, hospital.ctrl.soy_coordinador);
+		lt_esperar_multi.start();
+		// Thread de coordinador que espera mensajes
+		// test coordinador = true
+		LogThread lt_esperar_coord = new LogThread(COORDINADOR_PORT, hostname, true);
+		lt_esperar_coord.start();
+		TimeUnit.SECONDS.sleep(2);
+		// Thread para enviar mensaje desde coordinador al grupo multicast
+		// LogThread lt_enviar_multi = new LogThread(MULTICAST_PORT, MULTICAST_ADDRESS, true, "testeando2");
+		// lt_enviar_multi.start();
+		TimeUnit.SECONDS.sleep(2);
+		// Thread para enviar mensaje al coordinador
+		// test coordinador = true, se hace loop ya que soy coordinador y no coordinador al mismo tiempo
+		// si el coordinador recibe un mensaje en COORDINADOR_PORT entonces hace multicast
+		LogThread lt_enviar_coord = new LogThread(COORDINADOR_PORT, hostname, hospital.ctrl.soy_coordinador, "LOOP");
+		lt_enviar_coord.start();
 		//bServer.stopServer();
 	}
 }

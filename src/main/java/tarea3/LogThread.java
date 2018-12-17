@@ -17,27 +17,27 @@ import java.net.UnknownHostException;
 
 class LogThread implements Runnable {
   private Thread t;
-  private static int mcPort;
-  private static String mcIPStr;
-  private static int idCoordinador;  //id hospital coordinador
-  private static int idLocal;        //id hospital de esta maquina
-  private static boolean soyCoordinador;
-  private static boolean enviar;     //si el thread es para enviar actualizacion
-  private static String mensaje;
-  private static boolean receptorCoordinador; // si soy coordinador receptor
-  private static Logger logger = Logger.getLogger("log");
-  private static FileHandler fh;
+	public static final String MULTICAST_ADDRESS = "228.1.2.3";
+	public static final int MULTICAST_PORT = 9876;
+	public static final int COORDINADOR_PORT = 6789;
+  private int mcPort;
+  private String mcIPStr;
+  private boolean soyCoordinador;  // si soy coordinador o no
+  private boolean enviar;          // si el thread es para enviar actualizacion
+  private String mensaje;
+  private boolean receptorCoordinador; // si soy coordinador receptor
+  private Logger logger = Logger.getLogger("log");
+  private FileHandler fh;
 
   // Constructor para LogThread que envia actualizaciones
-  LogThread(int puerto, String direccion, int coordinador, int local, boolean enviar, String mensaje) {
+  LogThread(int puerto, String direccion, boolean soyCoordinador, String mensaje) {
     this.mcPort = puerto;
     this.mcIPStr = direccion;
-    this.idCoordinador = coordinador;
-    this.idLocal = local;
-    this.soyCoordinador = idLocal == idCoordinador;
-    this.enviar = enviar;
+    this.soyCoordinador = soyCoordinador;
+    this.enviar = true;
     this.mensaje = mensaje;
     this.receptorCoordinador = false;
+    System.out.println("[Log] Iniciando enviar actualizacions, soy coordinador? " + soyCoordinador);
   }
   // Constructor para LogThread que espera actualizaciones
   LogThread(int puerto, String direccion, boolean soyCoordinador) {
@@ -46,53 +46,71 @@ class LogThread implements Runnable {
     this.soyCoordinador = soyCoordinador;
     this.enviar = false;
     this.receptorCoordinador = false;
+    System.out.println("[Log] Iniciando listener actualizacions, soy coordinador? " + soyCoordinador);
   }
   // Constructor para LogThread que espera actualizaciones si es coordinador
-  private LogThread(int puerto, String direccion, boolean soyCoordinador, boolean receptorCoordinador) {
-    this.mcPort = puerto;
-    this.mcIPStr = direccion;
-    this.soyCoordinador = soyCoordinador;
-    this.enviar = false;
-    this.receptorCoordinador = receptorCoordinador;
-  }
+  // private LogThread(int puerto, String direccion, boolean soyCoordinador, boolean receptorCoordinador) {
+  //   this.mcPort = puerto;
+  //   this.mcIPStr = direccion;
+  //   this.soyCoordinador = soyCoordinador;
+  //   this.enviar = false;
+  //   this.receptorCoordinador = receptorCoordinador;
+  //   System.out.println("[Log] Iniciando listener actualizacions, soy coordinador");
+  // }
 
   public void run() {
     // El thread es para enviar actualizaciones y es temporal, se detiene al terminar de enviar
     if (this.enviar) {
-      // Si soy el coordinador entonces envio el mensaje a todas las maquinas
+      // Si soy el coordinador entonces envio el mensaje a todas las maquinas por multicast udp
       if (soyCoordinador) {
-        EnviarActualizacionSistema(mensaje);
+        EnviarActualizacionAlSistema(mensaje);
       }
       // Si no soy coordinador entonces envio el mensaje al coordinador
       else {
-        EnviarActualizacionCoordinador(mensaje);
+        EnviarActualizacionAlCoordinador(mensaje);
       }
     }
     // El thread es para recibir actualizaciones y es permanente, siempre espera recibir
     else {
-      if (!receptorCoordinador) {
-        RecibirActualizacionSistema();
+      // if (!receptorCoordinador) {
+      //   System.out.println("[Log] RecibirActualizacionDesdeCoordinador");
+      //   RecibirActualizacionDesdeCoordinador();
+      // }
+      // // Si es coordinador entonces abre otro socket para recibir actualizaciones desde las maquinas
+      // if (soyCoordinador) {
+      //   Thread coordinador_lt = new Thread(new LogThread(this.mcPort, this.mcIPStr, false, true));
+      //   coordinador_lt.start();
+      // }
+      // //ignorar nombre de variables, este if solo se cumple si el thread original es coordinador
+      // //coordinador recibe actualizaciones desde las maquinas y las propaga
+      // if (!soyCoordinador && receptorCoordinador) {
+      //   System.out.println("[Log] RecibirActualizacionDesdeSistema");
+      //   RecibirActualizacionDesdeSistema();
+      // }
+
+      // Si no soy coordinador entonces recibo actualizaciones desde multicast udp
+      if (!soyCoordinador) {
+        RecibirActualizacionDesdeCoordinador();
       }
-      if (soyCoordinador) {
-        LogThread lt = new LogThread(this.mcPort, this.mcIPStr, false, true);
-        new Thread(lt).start();
+      // Si soy coordinador entonces recibo actualizaciones
+      else {
+        RecibirActualizacionDesdeSistema();
       }
     }
   }
 
 
   // Enviar actualizacion de log al coordinador
-  public void EnviarActualizacionCoordinador(String entrada) {
+  public void EnviarActualizacionAlCoordinador(String entrada) {
     try {
-      DatagramSocket udpSocket = new DatagramSocket();
-      InetAddress mcIPAddress = InetAddress.getByName(mcIPStr);
-      byte[] msg = entrada.getBytes();
-      DatagramPacket packet = new DatagramPacket(msg, msg.length);
-      packet.setAddress(mcIPAddress);
-      packet.setPort(mcPort);
-      udpSocket.send(packet);
-      System.out.println("[Log] Mensaje enviado a coordinador");
-      udpSocket.close();
+      DatagramSocket clientSocket = new DatagramSocket();
+      InetAddress IPAddress = InetAddress.getByName(mcIPStr);
+      byte[] sendData = new byte[1024];
+      sendData = entrada.getBytes();
+      DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, IPAddress, mcPort);
+      clientSocket.send(sendPacket);
+      System.out.println("[Log] Mensaje enviado a coordinador: " + entrada);
+      clientSocket.close();
     } catch (UnknownHostException e) {
       System.out.println("[Log] Error al actualizar Log, host desconocido: ");
       e.printStackTrace();
@@ -102,16 +120,17 @@ class LogThread implements Runnable {
     }
   }
   // Coordinador envia actualizacion de log a todos las maquinas
-  public void EnviarActualizacionSistema(String entrada) {
+  public void EnviarActualizacionAlSistema(String entrada) {
     try {
       DatagramSocket udpSocket = new DatagramSocket();
-      InetAddress mcIPAddress = InetAddress.getByName(mcIPStr);
+      InetAddress mcIPAddress = InetAddress.getByName(this.mcIPStr);
       byte[] msg = entrada.getBytes();
       DatagramPacket packet = new DatagramPacket(msg, msg.length);
       packet.setAddress(mcIPAddress);
       packet.setPort(mcPort);
       udpSocket.send(packet);
-      System.out.println("[Log] Mensaje enviado desde coordinador");
+      // System.out.println("[Log] Mensaje enviado desde coordinador: " + entrada + "; address: " + packet.getAddress() + "; port: " + packet.getPort());
+      System.out.println("[Log] Mensaje enviado desde coordinador: " + entrada);
       udpSocket.close();
     } catch (UnknownHostException e) {
       System.out.println("[Log] Error al actualizar Log, host desconocido: ");
@@ -122,24 +141,24 @@ class LogThread implements Runnable {
     }
   }
   // Maquinas reciben actualizacion de log
-  public void RecibirActualizacionSistema() {
+  public void RecibirActualizacionDesdeCoordinador() {
     try {
       MulticastSocket mcSocket = null;
       InetAddress mcIPAddress = null;
-      mcIPAddress = InetAddress.getByName(mcIPStr);
-      mcSocket = new MulticastSocket(mcPort);
-      System.out.println("Recibiendo actualizaciones en:" + mcSocket.getLocalSocketAddress());
+      mcIPAddress = InetAddress.getByName(this.mcIPStr);
+      mcSocket = new MulticastSocket(this.mcPort);
+      // System.out.println("[Log] Recibiendo actualizaciones en" + mcSocket.getLocalSocketAddress());
       mcSocket.joinGroup(mcIPAddress);
-
       DatagramPacket packet = new DatagramPacket(new byte[1024], 1024);
       while (true) {
-        System.out.println("Esperando acutalizaciones...");
+        System.out.println("[Log] Esperando acutalizaciones...");
         mcSocket.receive(packet);
         String msg = new String(packet.getData(), packet.getOffset(), packet.getLength());
         if (msg.equals("exit")) {
           break;
         }
-        System.out.println("[Log] Actualizacion recibida:" + msg);
+        System.out.println("[Log] Actualizacion recibida desde coordinador: " + msg);
+        //Al recibir el mensaje se actualizan todas las maquinas, incluyendo coordinador
         ActualizarLog(msg);
       }
       mcSocket.leaveGroup(mcIPAddress);
@@ -152,8 +171,33 @@ class LogThread implements Runnable {
       e.printStackTrace();
     }
   }
+  // Coordinador reciben actualizacion de log
+  public void RecibirActualizacionDesdeSistema() {
+    try {
+      DatagramSocket serverSocket = new DatagramSocket(mcPort);
+      byte[] receiveData = new byte[1024];
+      while(true)
+      {
+        System.out.println("[Log] Coordinador esperando acutalizaciones...");
+        DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
+        serverSocket.receive(receivePacket);
+        String msg = new String( receivePacket.getData());
+        System.out.println("[Log] Actualizacion recibida en coordinador:" + msg);
+        // Enviar mensaje al grupo multicast
+        LogThread lt_enviar_multi = new LogThread(MULTICAST_PORT, MULTICAST_ADDRESS, true, msg);
+    		lt_enviar_multi.start();
+        System.out.println("[Log] Coordinador enviando actualizacion a maquinas:" + msg);
+      }
+    } catch (UnknownHostException e) {
+      System.out.println("[Log] Error al actualizar Log, host desconocido: ");
+      e.printStackTrace();
+    } catch (IOException e) {
+      System.out.println("[Log] Error al actualizar Log, IO exception: ");
+      e.printStackTrace();
+    }
+  }
 
-  // Actualiza el log localmente
+  // Actualiza el log localmente, solo debe hacerse desde grupo multicast para asegurar que todas las maquinas tienen lo mismo
   public void ActualizarLog(String mensaje) {
     try {
       String path = System.getProperty("user.dir");
@@ -161,7 +205,6 @@ class LogThread implements Runnable {
       logger.addHandler(fh);
       SimpleFormatter formatter = new SimpleFormatter();
       fh.setFormatter(formatter);
-      logger.info("My first log");
       logger.info(mensaje);
 
     } catch (SecurityException e) {
