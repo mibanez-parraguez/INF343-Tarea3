@@ -18,20 +18,42 @@ message CoordinadorMsg {
 	int32 id_hospital = 1;
 }
 
-message Requerimiento {
-	int32 id_requerimiento = 1;
-	int32 id_paciente = 2;
-	string req_type = 3; // enfermedades, tratamientos, examenes o medicamentos
-	string req_accion = 4; // agrega (asignados/no_realizados/recetado) o quita (registra como completados/realizado/suministrado)
-	string req_data = 5;
-}
-
 message OkMsg{
 	int32 ok = 1;
+}
+
+message SolicitudMsg{
+	message Empl{
+		int32 id_empleado = 1;
+		int32 cargo = 2;
+		int32 experiencia = 3;
+		int32 estudios = 4;
+	}
+	
+	int32 id_hospital = 1;
+	int32 id_paciente = 2;
+	Empl empleado = 3;
+}
+
+// status: 1 = acceso permitido; 2 = en queue; 3 = acceso denegado
+message SolicitudOk{
+	int32 status = 1;
+}
+
+message RequerimientoMsg {
+	int32 id_requerimiento = 1;
+	int32 id_paciente = 2;
+	string req_data = 3;
+}
+
+// status: 1 = cambio realizado; 2 = acceso denegado
+message RequerimientoOk{
+	int32 status = 1;
 }
 
 service Bully {
 	rpc IniciaEleccion(ElectionMsg) returns (OkMsg) {}
 	rpc AnuncioCoordinacion(CoordinadorMsg) returns (OkMsg) {}
-	rpc ModificaPaciente(Requerimiento) returns (OkMsg) {}
+	rpc SolicitarFicha(SolicitudMsg) returns (SolicitudOk) {}
+	rpc ModificaPaciente(RequerimientoMsg) returns (RequerimientoOk) {}
 }

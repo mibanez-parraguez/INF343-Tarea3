@@ -39,8 +39,9 @@ public class Hospital {
 	public static String REQUERIM_FILE = "requerimientos.json";
 	public static String STAFF_FILE = "staff";
 	public static String CONFIG_FILE = "configHospital";
-	public static final int BULLY = 1001;
 	public static String hostname = "Unknown";
+	public static final int BULLY = 1001;
+	public static final int LOG = 1002;
 
 	private ConfigH config = null;
 	public static ControlH ctrl;
@@ -53,10 +54,7 @@ public class Hospital {
 		BufferedReader bufferedReader = new BufferedReader(new FileReader(CONFIG_FILE));
 		this.config = new Gson().fromJson(bufferedReader, ConfigH.class);
 		bufferedReader.close();
-// 		this.config.autoconfig(CONFIG_FILE);
 		System.out.println("all done.\n\n");
-
-
 	}
 
 	public String getGreeting() {
@@ -122,32 +120,6 @@ public class Hospital {
 			return vecinos;
 		}
 
-
-		/** Toma el primer hospital disponible y lo marca como ocupado */
-		/*
-		public void autoconfig(String configfile) throws IOException{
-			// INFO solo para correr distintos procesos en la misma maquina, cada maquina debe tener sus datos al principio del json
-			System.out.println("Configurando hospital...");
-			Gson gson = new GsonBuilder()
-								.setPrettyPrinting()
-								.excludeFieldsWithoutExposeAnnotation()
-								.create();
-			for(HospData h : this.hospitales){
-				if(h !=null && !h.locked){
-					this.puerto_bully = h.puerto_bully;
-					this.id = h.id;
-					h.locked = true;
-
-					Writer writer = new FileWriter(configfile);
-					gson.toJson(this, writer);
-					writer.flush();
-					writer.close();
-					break;
-				}
-			}
-		}
-		*/
-
 		public void guardaCoordinadorExterno(int id_hospital){
 			this.extcoordinador_id = id_hospital;
 		}
@@ -165,15 +137,13 @@ public class Hospital {
 		private boolean hay_coordinador = false;
 
 		ControlH(List<String> v, List<Doctor> doctores, int idHospital){
-//  			this.bClient = new BullyClient(Hospital.ctrl);
-// 			this.bClient = new BullyClient();
 			this.vecinos = v;
 			// Genera el mejor candidato (segun mayor exp, estudios, id)
 			int max_exp =  Collections.max(doctores, Comparator.comparing(d -> d.experiencia)).experiencia;
 			int max_estudios = doctores.stream()
-						.filter(d -> d.experiencia == max_exp)
-						.max(Comparator.comparing(d -> d.estudios))
-						.get().estudios;
+									.filter(d -> d.experiencia == max_exp)
+									.max(Comparator.comparing(d -> d.estudios))
+									.get().estudios;
 			Doctor doc = doctores.stream()
 							.filter(d -> d.experiencia == max_exp && d.estudios == max_estudios)
 							.max(Comparator.comparing(d -> d.id))
@@ -431,7 +401,10 @@ class BullyClient implements Runnable {
 			asyncStub.iniciaEleccion(electionMsg, new StreamObserver<OkMsg>() {
 				@Override
 				public void onNext(OkMsg resp) {
-					// do nothing =)
+					if(resp.getOk()==1){ //si ok = 0, se considera como si no hubiese llegado respuesta.
+						logger.info("Llego respuesta OK");
+						finishLatch.countDown(); // TODO + 1 llamado? 
+					}
 				}
 				@Override
 				public void onError(Throwable t) {
@@ -439,8 +412,7 @@ class BullyClient implements Runnable {
 				}
 				@Override
 				public void onCompleted() {
-					logger.info("Llego respuesta OK");
-					finishLatch.countDown(); // TODO + 1 llamado?
+					// do nothing =D
 				}
 			});
 		}
@@ -551,6 +523,8 @@ class BullyServer implements Runnable {
 					logger.info("Soy mejor, pero ya estoy en carrera");
 				}
 			}else{
+				OkMsg msg = OkMsg.newBuilder().setOk(0).build(); // Ok = 0, simula que no respondo. 
+				responseObserver.onNext(msg);
 				BullyServer.ctrl.abandonaEleccion();
 			}
 			responseObserver.onCompleted();

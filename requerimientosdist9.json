@@ -1,0 +1,27 @@
+{"requerimientos": [
+
+	{"id": 1,
+	"cargo": "doctor",
+	"pacientes": [ {"id": 1, "requerimiento": "recetar metformina"},
+						{"id": 1, "requerimiento": "pedir tomografia"},
+						{"id": 2, "requerimiento": "colocar cateter"},
+					]},
+
+	{"id": 2,
+	"cargo": "doctor",
+	"pacientes": [ {"id": 3, "requerimiento": "recetar metformina"},
+					]},
+	{"id": 1,
+	"cargo": "enfermero",
+	"pacientes": [ {"id": 1, "requerimiento": "suministrar metformina"},
+						{"id": 1, "requerimiento": "completar quimioterapia"},
+						{"id": 1, "requerimiento": "completar proc 1"},
+					]},
+	{"id": 1,
+	"cargo": "paramedico",
+	"pacientes": [ {"id": 3, "requerimiento": "suministrar metformina"},
+						{"id": 1, "requerimiento": "realizar examen x"},
+						{"id": 1, "requerimiento": "realizar examen y"},
+					]},
+  ]
+}
