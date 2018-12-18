@@ -2,24 +2,28 @@
   "id": 12,
   "puerto_bully": 30123,
   "puerto_logger": 30125,
+  "puerto_req": 30127,
   "direccion": "dist12.inf.santiago.usm.cl",
   "hospitales": [
     {
       "id": 9,
       "puerto_bully": 30123,
       "puerto_logger": 30125,
+      "puerto_req": 30127,
       "direccion": "dist09.inf.santiago.usm.cl"
     },
     {
       "id": 10,
       "puerto_bully": 30123,
       "puerto_logger": 30125,
+      "puerto_req": 30127,
       "direccion": "dist10.inf.santiago.usm.cl"
     },
     {
       "id": 11,
       "puerto_bully": 30123,
       "puerto_logger": 30125,
+      "puerto_req": 30127,
       "direccion": "dist11.inf.santiago.usm.cl"
     }
   ]

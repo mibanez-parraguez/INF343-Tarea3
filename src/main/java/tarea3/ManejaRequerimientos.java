@@ -60,8 +60,7 @@ public class ManejaRequerimientos implements Runnable {
 		RequerimientoMsg.Builder reqbd = RequerimientoMsg.newBuilder();
 		Empl.Builder empl = Empl.newBuilder();
 		this.req_counter = 0;
-		for (int i = 0; i < reqs.size() ; i++){
-			//  reqs.get(i);
+		for (int i = 0; i < reqs.size(); i++){
 			if(reqs.get(i) != null){
 				empl.setId(reqs.get(i).id);
 				empl.setCargo(reqs.get(i).cargo);
@@ -81,7 +80,7 @@ public class ManejaRequerimientos implements Runnable {
 			}
 		}
 	}
-	
+
 	@Override
 	public void run() {
 		try{
@@ -92,7 +91,6 @@ public class ManejaRequerimientos implements Runnable {
 					this.ctrl.postulaEleccion();
 					TimeUnit.SECONDS.sleep(20);
 				}
-				
 				if(this.req_por_realizar.size()==0 && this.requerimientos.size() == 0){
 					logger.info("Sin requerimientos que mandar, esperando 4 seg. (queue: "+req_counter+"-" + this.req_en_queue.size()+")");
 					TimeUnit.SECONDS.sleep(4);

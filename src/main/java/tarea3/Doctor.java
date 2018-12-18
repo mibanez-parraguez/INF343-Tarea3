@@ -201,6 +201,7 @@ public class Doctor extends Empleado{
 	}
 	
 	private void unlockPaciente(int id){
+		// Unlock ;)
 		this.pacientes[id].locked = false;
 		this.pacientes[id].id_req = 0;
 		this.pacientes[id].hospital = 0;
@@ -279,48 +280,3 @@ class Coordinacion {
 		return null;
 	}
 }
-
-/*
-class AutorizaCliente{
-	// Clase que maneja el aviso a los dueños de requerimientos que les toca su turno con la ficha.
-	private static final Logger logger = Logger.getLogger(AutorizaCliente.class.getName());
-	private ManagedChannel channel;
-	private ReqCoordinacionGrpc.ReqCoordinacionStub asyncStub;
-	private String dest;
-	private SolicitudOk msg;
-	
-	AutorizaCliente(String direccion, SolicitudOk msg){
-		this.dest = direccion;
-		this.daAcceso(SolicitudOk msg);
-	}
-	
-	
-	public void shutdown() throws InterruptedException {
-		logger.info("Cerrando channel");
-		channel.shutdown().awaitTermination(5, TimeUnit.SECONDS);
-	}
-	
-	private void daAcceso(){
-		String host = dest.split(":")[0];
-		int port = Integer.parseInt(dest.split(":")[1]);
-		channel = ManagedChannelBuilder.forAddress(host, port).usePlaintext().build();
-		asyncStub = ReqCoordinacionGrpc.newStub(channel);
-		logger.info("[permiteAcceso] Channel: " + dest);
-			
-		asyncStub.permiteAcceso(msg, new StreamObserver<Empty>() {
-			@Override
-			public void onNext(Empty resp) {
-				// do nothing =)
-			}
-			@Override
-			public void onError(Throwable t) {
-				logger.info("Sin respuesta Empty");
-			}
-			@Override
-			public void onCompleted() {
-				logger.info("Llego respuesta Empty");
-			}
-		});
-	}
-}
-*/
