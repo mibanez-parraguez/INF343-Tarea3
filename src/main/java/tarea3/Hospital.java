@@ -486,7 +486,7 @@ class BullyClient implements Runnable {
 				}
 				@Override
 				public void onError(Throwable t) {
-					System.out.println("Sin respuesta OK");
+					System.out.println("Sin respuesta OK" + t);
 				}
 				@Override
 				public void onCompleted() {
