@@ -6,14 +6,30 @@ import com.google.gson.annotations.SerializedName;
 
 public class Requerimientos {
 	
-	class Reqs{
-		public int id;
-		public String cargo;
-		
-		// TODO
-		// wtf el formato de este campo
-		//public pacientes;
-	
+	class PacienteReq{
+		@SerializedName("ipd")
+		@Expose
+		public int idp;
+		@SerializedName("requerimiento")
+		@Expose
+		public String requerimiento;
 	}
 
+	class Req{
+		@SerializedName("id")
+		@Expose
+		public int id;
+		@SerializedName("cargo")
+		@Expose
+		public String cargo;
+		@SerializedName("pacientes")
+		@Expose
+		public List<PacienteReq> pacientes;
+		
+		public String toString(){
+			return String.format("Req: %s[%d] (req0: pac[%d] = %s", this.cargo, this.id, this.pacientes.get(0).idp, this.pacientes.get(0).requerimiento);
+		}
+	}
+	
+	public List<Req> requerimientos;
 }

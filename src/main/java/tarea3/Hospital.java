@@ -33,6 +33,8 @@ import io.grpc.StatusRuntimeException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
+import com.google.protobuf.Empty;
+
 
 public class Hospital {
 	public static String PACIENTES_FILE = "pacientes.json";
@@ -45,11 +47,13 @@ public class Hospital {
 	public static final int COORDINADOR_PORT = 6789;
 	public static final int BULLY = 1001;
 	public static final int LOG = 1002;
-
-	private ConfigH config = null;
+	public static final int REQ = 1003;
+	
+	public static ConfigH config = null;
 	public static ControlH ctrl;
 	public static Staff staff;
-
+	public static Paciente[] pacientes;
+	
 	Hospital(String hostname) throws IOException{
 		System.out.println("Creando Hospital...");
 		this.STAFF_FILE = "staff"+hostname+".json";
@@ -68,6 +72,10 @@ public class Hospital {
 		if (this.config != null){
 			if (servicetype == BULLY)
 				return this.config.puerto_bully;
+			if (servicetype == LOG)
+				return this.config.puerto_logger;
+			if (servicetype == REQ)
+				return this.config.puerto_req;
 		}
 		return 0;
 	}
@@ -99,6 +107,8 @@ public class Hospital {
 			@Expose
 			public int puerto_logger;
 			@Expose
+			public int puerto_req;
+			@Expose
 			public String direccion;
 		}
 		@Expose
@@ -108,12 +118,14 @@ public class Hospital {
 		@Expose
 		public int puerto_logger;
 		@Expose
+		public int puerto_req;
+		@Expose
 		public String direccion;
 		@Expose
 		public HospData[] hospitales = null;
-
+		
 		public int extcoordinador_id;
-
+		
 		/** Genera lista de vecinos (formato ip:puerto_bully) */
 		public List<String> vecindario(){
 			List<String> vecinos = new ArrayList<String>();
@@ -122,12 +134,49 @@ public class Hospital {
 					vecinos.add(h.direccion + ":" + h.puerto_bully);
 			return vecinos;
 		}
-
+		
+		public String getHospitalDir(int hospital_id, int port_type){
+			for(HospData h : this.hospitales){
+				if(h.id == hospital_id){
+					if(port_type == BULLY)
+						return h.direccion + ":" + h.puerto_bully;
+					if(port_type == LOG)
+						return h.direccion + ":" + h.puerto_logger;
+					if(port_type == REQ)
+						return h.direccion + ":" + h.puerto_req;
+				}
+			}
+			return null;
+		}
+		
+		/** Toma el primer hospital disponible y lo marca como ocupado */
+		public void autoconfig(String configfile) throws IOException{
+			// INFO solo para correr distintos procesos en la misma maquina. 
+			System.out.println("Configurando hospital...");
+			Gson gson = new GsonBuilder()
+								.setPrettyPrinting()
+								.excludeFieldsWithoutExposeAnnotation()
+								.create();
+			for(HospData h : this.hospitales){
+				if(h !=null && !h.locked){
+					this.puerto_bully = h.puerto_bully;
+					this.id = h.id;
+					h.locked = true;
+					
+					Writer writer = new FileWriter(configfile);
+					gson.toJson(this, writer);
+					writer.flush();
+					writer.close();
+					break;
+				}
+			}
+		}
+		
 		public void guardaCoordinadorExterno(int id_hospital){
 			this.extcoordinador_id = id_hospital;
 		}
 	}
-
+	
 	class ControlH {
 		//private static final Logger logger = Logger.getLogger(ControlH.class.getName()); // modifier 'static' is only allowed in constant variable declarations
 		private List<String> vecinos; // dirección hospitales vecinos (IP:Puerto)
@@ -159,15 +208,15 @@ public class Hospital {
 									.setEstudios(doc.estudios)
 									.build();
 		}
-
+		
 		public void linkClient(BullyClient bClient){
 			this.bClient = bClient;
 		}
-
+		
 		public List<String> getVecindario(){
 			return this.vecinos;
 		}
-
+		
 		public ElectionMsg getElectionMsg(){
 			return this.electionMsg;
 		}
@@ -181,7 +230,7 @@ public class Hospital {
 			// client -> anunciaCandidato
 			new Thread(bClient).start();
 		}
-
+		
 		// TODO necesita sync ?
 		public synchronized void abandonaEleccion(){
 			this.en_eleccion = true;
@@ -189,18 +238,18 @@ public class Hospital {
 			this.soy_coordinador = false;
 			this.hay_coordinador = false;
 		}
-
+		
 		public synchronized void iniciaCoordinacion(){
 			this.en_eleccion = false;
 			this.en_carrera = false;
 			this.soy_coordinador = true;
 			this.hay_coordinador = true;
-
+			
 			Hospital.staff.hazCoordinador(this.electionMsg.getIdCandidato());
 			// client -> anunciaCoordinador
 			new Thread(bClient).start();
 		}
-
+		
 		public synchronized void tomaCoordinadorExterno(CoordinadorMsg request){
 			this.en_eleccion = false;
 			this.en_carrera = false;
@@ -208,15 +257,15 @@ public class Hospital {
 			this.hay_coordinador = true;
 			System.out.println("[coordinador externo] Hay que tomar coordinador en hospital: " + request.getIdHospital());
 		}
-
+		
 		public boolean yaInicioEleccion(){
 			return this.en_eleccion;
 		}
-
+		
 		public boolean sigoEnCarrera(){
 			return this.en_carrera;
 		}
-
+		
 		public int hospitalID(){
 			return this.electionMsg.getIdHospital();
 		}
@@ -243,68 +292,57 @@ public class Hospital {
 			return false;
 		}
 	}
-
+	
 	/**
 	 * Main method.
 	 */
 	public static void main(String[] args) throws FileNotFoundException, IOException, InterruptedException {
-
+		
 		Gson gson = new GsonBuilder()
 							.setPrettyPrinting()
 							.excludeFieldsWithoutExposeAnnotation()
 							.create();
-
+		
 		BufferedReader bufferedReader = null;
-
+		
 		InetAddress addr;
 		addr = InetAddress.getLocalHost();
 		hostname = addr.getHostName();
 
 		Hospital hospital = new Hospital(hostname);
-
+		
 		System.out.println("Hello!!\n");
-
-
+		
+		// PACIENTES
 		bufferedReader = new BufferedReader(new FileReader(PACIENTES_FILE));
-		Paciente[] pacientes = new Gson().fromJson(bufferedReader, Paciente[].class);
+		hospital.pacientes = new Gson().fromJson(bufferedReader, Paciente[].class);
 		bufferedReader.close();
 
-		System.out.println("[1]" + pacientes[0].datos_personales[0].nombre);
-		System.out.println("[2]" + pacientes[0].enfermedades.get(1));
-
-		System.out.println("[3.1]" + pacientes[0].procedimientos[0].asignados.get(0));
-		System.out.println("[3.3]" + pacientes[0].procedimientos[1].completados.get(0));
-
-		System.out.println("[4.1]" + pacientes[0].examenes[1].no_realizados.get(0));
-		System.out.println("[4.2]" + pacientes[0].examenes[0].realizados.get(0));
-
-		System.out.println("[5.1]" + pacientes[0].medicamentos[0].recetados.get(0));
-		System.out.println("[5.2]" + pacientes[0].medicamentos[1].suministrados.get(0));
-
-
+		// STAFF
 		bufferedReader = new BufferedReader(new FileReader(STAFF_FILE));
 		hospital.staff = new Gson().fromJson(bufferedReader, Staff.class);
 		bufferedReader.close();
-
-		System.out.println("Staff");
-		System.out.println("[1.1] " + hospital.staff.doctores.get(0).toString());
-		System.out.println("[1.2] " + hospital.staff.doctores.get(1).toString());
-		System.out.println("[1.3] " + hospital.staff.doctores.get(2).toString());
-		System.out.println("[2.1] " + hospital.staff.paramedicos.get(0).toString());
-		System.out.println("[3.1] " + hospital.staff.enfermeros.get(0).toString());
-
-		//hospital.ctrl = new Hospital.ControlH(hospital.vecindario(), hospital.staff.doctores, hospital.port(BULLY));
- 		hospital.genCtrl();
-
- 		BullyServer bServer = new BullyServer(hospital.port(BULLY), Hospital.ctrl);
- 		new Thread(bServer).start();
+		
+		// REQUERIMIENTOS
+		bufferedReader = new BufferedReader(new FileReader(REQUERIM_FILE));
+		Requerimientos requs = new Gson().fromJson(bufferedReader, Requerimientos.class);
+		bufferedReader.close();
+		
+		// Instancia ctrl
+		hospital.genCtrl();
+		
+		// Servidor Bully
+		BullyServer bServer = new BullyServer(hospital.port(BULLY), Hospital.ctrl);
+		new Thread(bServer).start();
+		
+		// Cliente Bully (se lo pasa a ctrl.)
 		BullyClient bClient = new BullyClient(Hospital.ctrl);
 		Hospital.ctrl.linkClient(bClient);
 
 		System.out.println("Haciendo algo...");
-
+		
 		if(hospital.getId() == 1){
-			TimeUnit.SECONDS.sleep(36);
+			TimeUnit.SECONDS.sleep(30);
 			Hospital.ctrl.postulaEleccion();
 		}
 
@@ -339,12 +377,12 @@ class Staff {
 	@SerializedName(value = "Enfermero", alternate = {"enfermero", "Enfermeros", "enfermeros"})
 	@Expose
 	public List<Enfermero> enfermeros;
-
+	
 	public void hazCoordinador(int id){
 		for (Doctor d : this.doctores){
 			if(d.id == id){
 				System.out.println("[staff] Haciendo coordinador" + d.toString());
-				d.asumeCoordinacion();
+				d.asumeCoordinacion(Hospital.pacientes, Hospital.config);
 				System.out.println("[staff] Coordinador" + d.toString());
 			}
 		}
@@ -359,13 +397,13 @@ class BullyClient implements Runnable {
 	private BullyGrpc.BullyStub asyncStub;
 	private StreamObserver<OkMsg> resp;
 	private static Hospital.ControlH ctrl;
-
+	
 	BullyClient(Hospital.ControlH ctrl){
 		this.ctrl = ctrl;
 		this.channels = new ArrayList<ManagedChannel>();
 		System.out.println("[BClient] this.ctrl " + Hospital.ctrl);
 	}
-
+	
 	@Override
 	public void run() {
 		if(this.ctrl.yaInicioEleccion()){
@@ -398,7 +436,7 @@ class BullyClient implements Runnable {
 			}
 		}
 	}
-
+	
 	public synchronized void shutdown() throws InterruptedException {
 		System.out.println("Cerrando channels");
 		for (ManagedChannel channel : this.channels)
@@ -418,13 +456,13 @@ class BullyClient implements Runnable {
 			channels2.add(ManagedChannelBuilder.forAddress(host, port).usePlaintext().build());
 			asyncStub = BullyGrpc.newStub(channels2.get(channels2.size()-1)); // TODO 1 stup x channel ??
 			System.out.println("[eleccion] Channel: " + dest);
-
+			
 			asyncStub.iniciaEleccion(electionMsg, new StreamObserver<OkMsg>() {
 				@Override
 				public void onNext(OkMsg resp) {
 					if(resp.getOk()==1){ //si ok = 0, se considera como si no hubiese llegado respuesta.
 						logger.info("Llego respuesta OK");
-						finishLatch.countDown(); // TODO + 1 llamado?
+						finishLatch.countDown(); // TODO + 1 llamado? 
 					}
 				}
 				@Override
@@ -439,7 +477,7 @@ class BullyClient implements Runnable {
 		}
 		return finishLatch;
 	}
-
+	
 	private void anunciaCoordinador(){
 		List<String> vecinos = this.ctrl.getVecindario();
 		CoordinadorMsg msg = CoordinadorMsg.newBuilder().setIdHospital(this.ctrl.hospitalID()).build();
@@ -449,7 +487,7 @@ class BullyClient implements Runnable {
 			channels.add(ManagedChannelBuilder.forAddress(host, port).usePlaintext().build());
 			asyncStub = BullyGrpc.newStub(channels.get(channels.size()-1)); // TODO 1 stup x channel ??
 			System.out.println("[anunciaCoord] Channel: " + dest);
-
+			
 			asyncStub.anuncioCoordinacion(msg, new StreamObserver<OkMsg>() {
 				@Override
 				public void onNext(OkMsg resp) {
@@ -496,7 +534,7 @@ class BullyServer implements Runnable {
 			System.out.println("[bullyserver.run] InterruptedException error");
 		}
 	}
-
+	
 	public void startServer() throws IOException {
 		server.start();
 		logger.info("Server started, listening on " + port);
@@ -529,12 +567,12 @@ class BullyServer implements Runnable {
 	// Servidor Bully eleccion
 	private static class BullyService extends BullyGrpc.BullyImplBase {
 		private static final Logger logger = Logger.getLogger(BullyService.class.getName());
-
+		
 		/** servicio eleccion */
 		@Override
 		public void iniciaEleccion(ElectionMsg request, StreamObserver<OkMsg> responseObserver) {
 			logger.info("Recibi candidato");
-			if(BullyServer.ctrl.soyMasFuerte(request)){ // si lo soy, envio OK y ctrluto proc de eleccion.
+			if(BullyServer.ctrl.soyMasFuerte(request)){ // si lo soy, envio OK y postuto a proc de eleccion.
 				OkMsg msg = OkMsg.newBuilder().setOk(1).build();
 				responseObserver.onNext(msg);
 				if(!BullyServer.ctrl.yaInicioEleccion()){
@@ -544,19 +582,135 @@ class BullyServer implements Runnable {
 					logger.info("Soy mejor, pero ya estoy en carrera");
 				}
 			}else{
-				OkMsg msg = OkMsg.newBuilder().setOk(0).build(); // Ok = 0, simula que no respondo.
+				OkMsg msg = OkMsg.newBuilder().setOk(0).build(); // Ok = 0, simula que no respondo. 
 				responseObserver.onNext(msg);
 				BullyServer.ctrl.abandonaEleccion();
 			}
 			responseObserver.onCompleted();
 		}
-
+		
 		/** servicio anuncio coordinacion */
 		@Override
 		public void anuncioCoordinacion(CoordinadorMsg request, StreamObserver<OkMsg> responseObserver) {
 			logger.info("Recibi coordinacion");
 			BullyServer.ctrl.tomaCoordinadorExterno(request);
 			OkMsg msg = OkMsg.newBuilder().setOk(1).build();
+			responseObserver.onNext(msg);
+			responseObserver.onCompleted();
+		}
+	}
+}
+
+class RequerimientosClient implements Runnable{
+	private static final Logger logger = Logger.getLogger(RequerimientosClient.class.getName());
+	@Override
+	public void run() {
+// 		try{
+// 			//TODO
+// 		} catch (IOException e){
+// 			logger.warning("IO error");
+// 		} catch (InterruptedException e){
+// 			logger.warning("InterruptedException error");
+// 		}
+	}
+}
+
+class RequerimientosServer implements Runnable {
+	private static final Logger logger = Logger.getLogger(RequerimientosServer.class.getName());
+	private final int port;
+	private final Server server;
+	private static Hospital.ControlH ctrl;
+	private static Doctor coordinador;
+
+	RequerimientosServer(int port,Hospital.ControlH ctrl) {
+		this.ctrl = ctrl;
+		this.port = port;
+		server = ServerBuilder.forPort(port)
+					.addService(new ReqCoordinacionService())
+					.build();
+	}
+
+	@Override
+	public void run() {
+		try{
+			this.startServer();
+			this.blockUntilShutdown();
+		} catch (IOException e){
+			logger.warning("IO error");
+		} catch (InterruptedException e){
+			logger.warning("InterruptedException error");
+		}
+	}
+	
+	public void startServer() throws IOException {
+		server.start();
+		logger.info("Server started, listening on " + port);
+		Runtime.getRuntime().addShutdownHook(new Thread() {
+			@Override
+			public void run() {
+				// Use stderr here since the logger may has been reset by its JVM shutdown hook.
+				System.err.println("*** shutting down gRPC server since JVM is shutting down");
+				//RequerimientosServer.this.stopServer(); //TODO
+				System.err.println("*** server shut down");
+			}
+		});
+	}
+
+	public void stopServer() {
+		if (server != null) {
+//			if (!server.isShutdown()){
+				server.shutdown();
+//			}
+		}
+	}
+
+	protected void blockUntilShutdown() throws InterruptedException {
+		if (server != null) {
+			server.awaitTermination();
+		}
+	}
+	
+	public void linkCoordinador(Doctor doc){
+		this.coordinador = doc;
+	}
+	
+	public void linkCtrl(Hospital.ControlH ctrl){
+		this.ctrl = ctrl;
+	}
+	
+	private static class ReqCoordinacionService extends ReqCoordinacionGrpc.ReqCoordinacionImplBase {
+		private static final Logger logger = Logger.getLogger(ReqCoordinacionService.class.getName());
+	
+		/** servicio para Solicitar Ficha (acceso)*/
+		@Override
+		public void solicitarFicha(SolicitarMsg request, StreamObserver<SolicitudOk> responseObserver) {
+			logger.info("Recibi solicitacion de acceso a paciente: " + request.getIdPaciente());
+			RequerimientosServer.coordinador.solicitaFicha(request);
+
+			SolicitudOk msg = SolicitudOk.newBuilder().setStatus(0).build();
+			responseObserver.onNext(msg);
+			responseObserver.onCompleted();
+		}
+		
+		/** servicio para recibir notificacion */
+		@Override
+		public void permiteAcceso(SolicitudOk request, StreamObserver<Empty> responseObserver) {
+			logger.info("Recibiendo notificacion");
+			Empty msg = Empty.newBuilder().build();
+			responseObserver.onNext(msg);
+			responseObserver.onCompleted();
+			
+			if (request.getStatus() == 1){ //tengo permiso para realizar trabajo sobre el paciente.
+				// TODO requerimiento en queue listo para enviar al coordinador para que modifique
+			}
+		}
+		
+		/** servicio para modificar registro paciente*/
+		@Override
+		public void modificaPaciente(RequerimientoMsg request, StreamObserver<RequerimientoOk> responseObserver) {
+			logger.info("Recibi coordinacion");
+			int status = RequerimientosServer.coordinador.modificaFicha(request);
+			RequerimientoOk msg = RequerimientoOk.newBuilder().setStatus(status).build();
 			responseObserver.onNext(msg);
 			responseObserver.onCompleted();
 		}

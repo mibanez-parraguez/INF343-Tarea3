@@ -1,6 +1,7 @@
 package tarea3;
 
 import java.util.List;
+import java.util.ArrayList;
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
 
@@ -16,24 +17,24 @@ public class Paciente {
 	
 	class Proc{
 		@Expose
-		public List<String> asignados = null;
+		public ArrayList<String> asignados = null;
 		@Expose
-		public List<String> completados = null;
+		public ArrayList<String> completados = null;
 	}
 	
 	class Exams{
 		@Expose
-		public List<String> realizados = null;
+		public ArrayList<String> realizados = null;
 		@SerializedName("no realizados")
 		@Expose
-		public List<String> no_realizados = null;
+		public ArrayList<String> no_realizados = null;
 	}
 	
 	class Drugs{
 		@Expose
-		public List<String> recetados = null;
+		public ArrayList<String> recetados = null;
 		@Expose
-		public List<String> suministrados = null;
+		public ArrayList<String> suministrados = null;
 	}
 	
 	@Expose
@@ -42,7 +43,7 @@ public class Paciente {
 	@Expose
 	public Datos[] datos_personales;
 	@Expose
-	public List<String> enfermedades = null;
+	public ArrayList<String> enfermedades = null;
 	@SerializedName("tratamientos/procedimientos")
 	@Expose
 	public Proc[] procedimientos;
@@ -53,4 +54,6 @@ public class Paciente {
 	
 	// No exposed =P
 	public boolean locked;
+	public int id_req;
+	public int hospital;
 }

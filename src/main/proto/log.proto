@@ -17,4 +17,5 @@ message LogOkMsg{
 
 service LogHospital {
 	rpc IngresaLog(LogMsg) returns (LogOkMsg){}
-}
+} 
+ 
