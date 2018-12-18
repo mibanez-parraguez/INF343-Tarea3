@@ -65,7 +65,10 @@ public class Doctor extends Empleado{
 		// Si hay mas requerimientos para esta ficha, se le da acceso al siguiente en espera.
 		int status;
 		status = this.hazModificacion(req);
-		this.logger("Requerimiento realizado!\n[hosp: "+req.getHospital()+", req: "+req.getIdRequerimiento()+"] "+req.getReqData());
+		if(status == 1)
+			System.out.println("Requerimiento realizado!\n[hosp: "+req.getHospital()+", req: "+req.getIdRequerimiento()+"] "+req.getReqData());
+		if(status == 2)
+			System.out.println("Requerimiento DENEGADO!\n[hosp: "+req.getHospital()+", req: "+req.getIdRequerimiento()+"] "+req.getReqData());
 		this.autorizaSiguiente(req.getIdPaciente());
 		return status;
 	}
