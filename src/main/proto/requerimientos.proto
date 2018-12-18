@@ -38,7 +38,8 @@ message RequerimientoMsg {
 
 // status: 1 = cambio realizado; 2 = acceso denegado
 message RequerimientoOk{
-	int32 status = 1;
+	int32 id_requerimiento = 1;
+	int32 status = 2;
 }
 
 
@@ -46,5 +47,4 @@ service ReqCoordinacion {
 	rpc SolicitarFicha(SolicitarMsg) returns (SolicitudOk) {}
 	rpc PermiteAcceso(SolicitudOk) returns (google.protobuf.Empty) {}
 	rpc ModificaPaciente(RequerimientoMsg) returns (RequerimientoOk) {}
-	rpc CompletaRequerimiento(RequerimientoOk) returns (google.protobuf.Empty) {} // TODO eliminar
 } 

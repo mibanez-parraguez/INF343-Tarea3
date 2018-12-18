@@ -64,10 +64,6 @@ public class Hospital {
 		System.out.println("all done.\n\n");
 	}
 
-	public String getGreeting() {
-		return "Hello world.";
-	}
-
 	public int port(int servicetype){
 		if (this.config != null){
 			if (servicetype == BULLY)
@@ -79,14 +75,15 @@ public class Hospital {
 		}
 		return 0;
 	}
-
-	public int getId(){
+	
+	public int getId(){ // Id de este hospital.
 		if (this.config != null)
 			return this.config.id;
 		return 0;
 	}
 
 	public List<String> vecindario(){
+	// Direcciones IP de otros hospitales para eleccion bully.
 		if (this.config != null)
 			return this.config.vecindario();
 		return null;
@@ -97,6 +94,7 @@ public class Hospital {
 	}
 
 	class ConfigH {
+		// Maneja informacion con las direcciones ip de los otros hospitales
 		class HospData{
 			@Expose
 			public boolean locked;
@@ -125,6 +123,7 @@ public class Hospital {
 		public HospData[] hospitales = null;
 		
 		public int extcoordinador_id;
+		public String extcoordinador_dir; //direccion ip:puerto del coordinador.
 		
 		/** Genera lista de vecinos (formato ip:puerto_bully) */
 		public List<String> vecindario(){
@@ -135,6 +134,7 @@ public class Hospital {
 			return vecinos;
 		}
 		
+		/** Direccion ip:puerto del hospital y servicio especificado */
 		public String getHospitalDir(int hospital_id, int port_type){
 			for(HospData h : this.hospitales){
 				if(h.id == hospital_id){
@@ -148,45 +148,32 @@ public class Hospital {
 			}
 			return null;
 		}
-		
-		/** Toma el primer hospital disponible y lo marca como ocupado */
-		public void autoconfig(String configfile) throws IOException{
-			// INFO solo para correr distintos procesos en la misma maquina. 
-			System.out.println("Configurando hospital...");
-			Gson gson = new GsonBuilder()
-								.setPrettyPrinting()
-								.excludeFieldsWithoutExposeAnnotation()
-								.create();
-			for(HospData h : this.hospitales){
-				if(h !=null && !h.locked){
-					this.puerto_bully = h.puerto_bully;
-					this.id = h.id;
-					h.locked = true;
-					
-					Writer writer = new FileWriter(configfile);
-					gson.toJson(this, writer);
-					writer.flush();
-					writer.close();
-					break;
-				}
-			}
+
+		/** Guarda direccion ip del coordinador si no es este hospital */
+		public void guardaCoordinador(int id_hospital){
+			this.extcoordinador_id = id_hospital;
+			this.extcoordinador_dir = this.getHospitalDir(id_hospital, REQ);
 		}
 		
-		public void guardaCoordinadorExterno(int id_hospital){
-			this.extcoordinador_id = id_hospital;
+		/** Coordinador en este hospital (direccion) */
+		public void guardaCoordinador(){
+			this.extcoordinador_id = this.id;
+			this.extcoordinador_dir = "127.0.0.1:"+this.puerto_bully;
 		}
 	}
 	
 	class ControlH {
-		//private static final Logger logger = Logger.getLogger(ControlH.class.getName()); // modifier 'static' is only allowed in constant variable declarations
+		// flags para eleccion bully
 		private List<String> vecinos; // dirección hospitales vecinos (IP:Puerto)
 		private ElectionMsg electionMsg;
 		private BullyClient bClient;
+		private RequerimientosServer reqServer;
+		private ManejaRequerimientos mgmreq;
 
-		private boolean en_eleccion = false;
-		private boolean en_carrera = false;
+		private boolean en_eleccion = false; // Se esta escogiendo un coordinador. Me llego un mensaje o detecte fallo
+		private boolean en_carrera = false; // true si no me a llegado mensaje de candidato mejor
 		private boolean soy_coordinador = false;
-		private boolean hay_coordinador = false;
+		private boolean hay_coordinador = false; // coordinador en otro hospital.
 
 		ControlH(List<String> v, List<Doctor> doctores, int idHospital){
 			this.vecinos = v;
@@ -208,21 +195,35 @@ public class Hospital {
 									.setEstudios(doc.estudios)
 									.build();
 		}
-		
+	
 		public void linkClient(BullyClient bClient){
+			// instancia de cliente bully (envia msg de candidato y coordinador)
 			this.bClient = bClient;
+			System.out.println("[linkClient] bClient:" + this.bClient); // DEBUG
+		}
+
+		public void linkReqServer(RequerimientosServer reqServer){
+			// instancia de cliente bully (envia msg de candidato y coordinador)
+			this.reqServer = reqServer;
+			System.out.println("[linkReqServer] reqServer:" + this.reqServer); // DEBUG
 		}
 		
+		public void linkReqM(ManejaRequerimientos mgmreq){
+			this.mgmreq = mgmreq;
+			System.out.println("[linkReqM] mgmreq:" + this.mgmreq); // DEBUG
+		}
+
 		public List<String> getVecindario(){
 			return this.vecinos;
 		}
 		
 		public ElectionMsg getElectionMsg(){
+			// Para anunciar candidato. Msge tiene al mejor de este hospital
 			return this.electionMsg;
 		}
 
-		// TODO necesita sync ?
-		public synchronized void postulaEleccion(){
+		// synchronized
+		public void postulaEleccion(){
 			this.en_eleccion = true;
 			this.en_carrera = true;
 			this.soy_coordinador = false;
@@ -230,42 +231,52 @@ public class Hospital {
 			// client -> anunciaCandidato
 			new Thread(bClient).start();
 		}
-		
-		// TODO necesita sync ?
-		public synchronized void abandonaEleccion(){
+
+		// synchronized
+		public void abandonaEleccion(){
 			this.en_eleccion = true;
 			this.en_carrera = false;
 			this.soy_coordinador = false;
 			this.hay_coordinador = false;
 		}
-		
-		public synchronized void iniciaCoordinacion(){
+
+		// synchronized
+		public  void iniciaCoordinacion(){
 			this.en_eleccion = false;
 			this.en_carrera = false;
 			this.soy_coordinador = true;
 			this.hay_coordinador = true;
 			
-			Hospital.staff.hazCoordinador(this.electionMsg.getIdCandidato());
+			// Gane eleccion, asumo coordinacion
+			Doctor d = Hospital.staff.hazCoordinador(this.electionMsg.getIdCandidato());
+			this.reqServer.linkCoordinador(d);
+			Hospital.config.guardaCoordinador(); // (direccion)
+// 			System.out.println("[iniciaCoordinacion] ext:" + Hospital.config.extcoordinador_dir); // DEBUG
+// 			System.out.println("[iniciaCoordinacion] mgmreq:" + this.mgmreq); // DEBUG
+			this.mgmreq.destinoCoordinador(Hospital.config.extcoordinador_dir);
 			// client -> anunciaCoordinador
-			new Thread(bClient).start();
+			new Thread(bClient).start(); // Me anuncio como nuevo coordinador
 		}
-		
-		public synchronized void tomaCoordinadorExterno(CoordinadorMsg request){
+	
+		// synchronized
+		public void tomaCoordinadorExterno(CoordinadorMsg request){
 			this.en_eleccion = false;
 			this.en_carrera = false;
 			this.soy_coordinador = false;
 			this.hay_coordinador = true;
 			System.out.println("[coordinador externo] Hay que tomar coordinador en hospital: " + request.getIdHospital());
+			Hospital.config.guardaCoordinador(request.getIdHospital());
+			this.mgmreq.destinoCoordinador(Hospital.config.extcoordinador_dir);
 		}
-		
+
 		public boolean yaInicioEleccion(){
 			return this.en_eleccion;
 		}
-		
+
 		public boolean sigoEnCarrera(){
 			return this.en_carrera;
 		}
-		
+
 		public int hospitalID(){
 			return this.electionMsg.getIdHospital();
 		}
@@ -292,7 +303,7 @@ public class Hospital {
 			return false;
 		}
 	}
-	
+
 	/**
 	 * Main method.
 	 */
@@ -311,8 +322,6 @@ public class Hospital {
 
 		Hospital hospital = new Hospital(hostname);
 		
-		System.out.println("Hello!!\n");
-		
 		// PACIENTES
 		bufferedReader = new BufferedReader(new FileReader(PACIENTES_FILE));
 		hospital.pacientes = new Gson().fromJson(bufferedReader, Paciente[].class);
@@ -323,10 +332,11 @@ public class Hospital {
 		hospital.staff = new Gson().fromJson(bufferedReader, Staff.class);
 		bufferedReader.close();
 		
-		// REQUERIMIENTOS
-		bufferedReader = new BufferedReader(new FileReader(REQUERIM_FILE));
-		Requerimientos requs = new Gson().fromJson(bufferedReader, Requerimientos.class);
-		bufferedReader.close();
+		//////////////
+		//
+		//
+		//////////////
+		
 		
 		// Instancia ctrl
 		hospital.genCtrl();
@@ -338,32 +348,26 @@ public class Hospital {
 		// Cliente Bully (se lo pasa a ctrl.)
 		BullyClient bClient = new BullyClient(Hospital.ctrl);
 		Hospital.ctrl.linkClient(bClient);
-
-		System.out.println("Haciendo algo...");
 		
-		if(hospital.getId() == 1){
-			TimeUnit.SECONDS.sleep(30);
+		ManejaRequerimientos mreq = new ManejaRequerimientos(hospital.getId(), Hospital.ctrl);
+		RequerimientosServer reqServer = new RequerimientosServer(hospital.port(REQ), Hospital.ctrl);
+		new Thread(reqServer).start();
+		
+		Hospital.ctrl.linkReqM(mreq);
+		Hospital.ctrl.linkReqServer(reqServer);
+		
+		// if(hostname.equals("dist9")){
+		if(hospital.getId() == 9){
+			TimeUnit.SECONDS.sleep(10);
 			Hospital.ctrl.postulaEleccion();
 		}
-
-		// Thread que espera actualizaciones desde grupo multicast
-		LogThread lt_esperar_multi = new LogThread(MULTICAST_PORT, MULTICAST_ADDRESS, hospital.ctrl.soy_coordinador);
-		lt_esperar_multi.start();
-		// Thread de coordinador que espera mensajes
-		// test coordinador = true
-		LogThread lt_esperar_coord = new LogThread(COORDINADOR_PORT, hostname, true);
-		lt_esperar_coord.start();
-		TimeUnit.SECONDS.sleep(2);
-		// Thread para enviar mensaje desde coordinador al grupo multicast
-		// LogThread lt_enviar_multi = new LogThread(MULTICAST_PORT, MULTICAST_ADDRESS, true, "testeando2");
-		// lt_enviar_multi.start();
-		TimeUnit.SECONDS.sleep(2);
-		// Thread para enviar mensaje al coordinador
-		// test coordinador = true, se hace loop ya que soy coordinador y no coordinador al mismo tiempo
-		// si el coordinador recibe un mensaje en COORDINADOR_PORT entonces hace multicast
-		LogThread lt_enviar_coord = new LogThread(COORDINADOR_PORT, hostname, hospital.ctrl.soy_coordinador, "LOOP");
-		lt_enviar_coord.start();
-		//bServer.stopServer();
+		
+		// Espera 20 seg al principio para esperar primera eleccion.
+		// Al parecer no es necesario. Terminan coordinandoce igual, pero con mas msges.
+ 		TimeUnit.SECONDS.sleep(20);
+		if(hospital.getId() == 10){// DEBUG ELIMINAR ESTO!!! Todas las maquinas deben iniciar mreq.
+			new Thread(mreq).start();
+		}
 	}
 }
 
@@ -378,19 +382,21 @@ class Staff {
 	@Expose
 	public List<Enfermero> enfermeros;
 	
-	public void hazCoordinador(int id){
+	public Doctor hazCoordinador(int id){
 		for (Doctor d : this.doctores){
 			if(d.id == id){
 				System.out.println("[staff] Haciendo coordinador" + d.toString());
 				d.asumeCoordinacion(Hospital.pacientes, Hospital.config);
 				System.out.println("[staff] Coordinador" + d.toString());
+				return d;
 			}
 		}
+		System.out.println("[Staff.hazCoordinador] Error no debi haber llegado aca)");
+		return null;
 	}
 }
 
-
-
+// Cliente para enviar los mensajes de Candidato y Coordinador en eleccion Bully.
 class BullyClient implements Runnable {
 	private static final Logger logger = Logger.getLogger(BullyClient.class.getName());
 	private List<ManagedChannel> channels;
@@ -406,10 +412,10 @@ class BullyClient implements Runnable {
 	
 	@Override
 	public void run() {
-		if(this.ctrl.yaInicioEleccion()){
+		if(this.ctrl.yaInicioEleccion()){ // Estoy en eleccion, debo mandar msg con candidato
 			CountDownLatch finishLatch = this.anunciaCandidato();
 			try {
-				if (!finishLatch.await(30, TimeUnit.SECONDS)) {
+				if (!finishLatch.await(6, TimeUnit.SECONDS)) {
 					logger.info("Timeout Sin respuestas OK, asumiendo coordinacion");
 					if(this.ctrl.sigoEnCarrera())
 						this.ctrl.iniciaCoordinacion();
@@ -429,7 +435,7 @@ class BullyClient implements Runnable {
 			logger.info("Anunciando coordinador");
 			this.anunciaCoordinador();
 			try{
-				TimeUnit.SECONDS.sleep(4);
+				TimeUnit.SECONDS.sleep(1);
 // 				this.shutdown();
 			} catch (InterruptedException e){
 				System.out.println("InterruptedException shutdown");
@@ -444,6 +450,8 @@ class BullyClient implements Runnable {
 		this.channels.clear();
 	}
 
+	// Enviar mensaje con candidato propio (electionMsg), generado en la clase ControlH.
+	// Hace un loop para enviar a todos los vecino. Gprc no soporta multicast.
 	private CountDownLatch anunciaCandidato(){
 		final CountDownLatch finishLatch = new CountDownLatch(1);//Basta que uno responda con OK.
 		ElectionMsg electionMsg = this.ctrl.getElectionMsg();
@@ -455,7 +463,7 @@ class BullyClient implements Runnable {
 			int port = Integer.parseInt(dest.split(":")[1]);
 			channels2.add(ManagedChannelBuilder.forAddress(host, port).usePlaintext().build());
 			asyncStub = BullyGrpc.newStub(channels2.get(channels2.size()-1)); // TODO 1 stup x channel ??
-			System.out.println("[eleccion] Channel: " + dest);
+			System.out.println("[anunciaCandidato] Channel: " + dest);
 			
 			asyncStub.iniciaEleccion(electionMsg, new StreamObserver<OkMsg>() {
 				@Override
@@ -477,7 +485,9 @@ class BullyClient implements Runnable {
 		}
 		return finishLatch;
 	}
-	
+
+	// No llegaron respuestas OK ni mensajes con mejores candidatos.
+	// Se asume coordinacion y se envia mensaje por medio de esta funcion
 	private void anunciaCoordinador(){
 		List<String> vecinos = this.ctrl.getVecindario();
 		CoordinadorMsg msg = CoordinadorMsg.newBuilder().setIdHospital(this.ctrl.hospitalID()).build();
@@ -506,7 +516,7 @@ class BullyClient implements Runnable {
 	}
 }
 
-
+// Servidor Bully, escucha los mensajes relacionados a la eleccion.
 class BullyServer implements Runnable {
 	private static final Logger logger = Logger.getLogger(BullyServer.class.getName());
 	private final int port;
@@ -582,7 +592,7 @@ class BullyServer implements Runnable {
 					logger.info("Soy mejor, pero ya estoy en carrera");
 				}
 			}else{
-				OkMsg msg = OkMsg.newBuilder().setOk(0).build(); // Ok = 0, simula que no respondo. 
+				OkMsg msg = OkMsg.newBuilder().setOk(0).build(); // Ok = 0, simula que no se hace respuesta. 
 				responseObserver.onNext(msg);
 				BullyServer.ctrl.abandonaEleccion();
 			}
@@ -601,28 +611,15 @@ class BullyServer implements Runnable {
 	}
 }
 
-class RequerimientosClient implements Runnable{
-	private static final Logger logger = Logger.getLogger(RequerimientosClient.class.getName());
-	@Override
-	public void run() {
-// 		try{
-// 			//TODO
-// 		} catch (IOException e){
-// 			logger.warning("IO error");
-// 		} catch (InterruptedException e){
-// 			logger.warning("InterruptedException error");
-// 		}
-	}
-}
-
 class RequerimientosServer implements Runnable {
 	private static final Logger logger = Logger.getLogger(RequerimientosServer.class.getName());
 	private final int port;
 	private final Server server;
 	private static Hospital.ControlH ctrl;
 	private static Doctor coordinador;
+	private static ManejaRequerimientos mgmreq;
 
-	RequerimientosServer(int port,Hospital.ControlH ctrl) {
+	RequerimientosServer(int port, Hospital.ControlH ctrl) {
 		this.ctrl = ctrl;
 		this.port = port;
 		server = ServerBuilder.forPort(port)
@@ -643,6 +640,8 @@ class RequerimientosServer implements Runnable {
 	}
 	
 	public void startServer() throws IOException {
+		System.out.println("[reqServer.start] "); // DEBUG
+		System.out.println("[reqServer.start] port: " + port); // DEBUG
 		server.start();
 		logger.info("Server started, listening on " + port);
 		Runtime.getRuntime().addShutdownHook(new Thread() {
@@ -685,32 +684,38 @@ class RequerimientosServer implements Runnable {
 		@Override
 		public void solicitarFicha(SolicitarMsg request, StreamObserver<SolicitudOk> responseObserver) {
 			logger.info("Recibi solicitacion de acceso a paciente: " + request.getIdPaciente());
-			RequerimientosServer.coordinador.solicitaFicha(request);
-
-			SolicitudOk msg = SolicitudOk.newBuilder().setStatus(0).build();
+			// Soy coordinador y recibo una solicitud para acceder a una ficha.
+			// Doctor coordinador checkea si la ficha esta disponible o no (status = 1, libre. status = 2, no).
+			int status = RequerimientosServer.coordinador.solicitaFicha(request);
+			System.out.println("[solicitarFicha] doc responde 'status: " + status+"'");
+			SolicitudOk msg = SolicitudOk.newBuilder().setStatus(status).build();
+			System.out.println("[solicitarFicha] msg construido");
 			responseObserver.onNext(msg);
+			System.out.println("[solicitarFicha] msg enviado");
 			responseObserver.onCompleted();
+			System.out.println("[solicitarFicha] conexion cerrada");
 		}
 		
 		/** servicio para recibir notificacion */
 		@Override
 		public void permiteAcceso(SolicitudOk request, StreamObserver<Empty> responseObserver) {
-			logger.info("Recibiendo notificacion");
+			logger.info("Recibiendo notificacion de acceso concedido");
 			Empty msg = Empty.newBuilder().build();
 			responseObserver.onNext(msg);
 			responseObserver.onCompleted();
-			
-			if (request.getStatus() == 1){ //tengo permiso para realizar trabajo sobre el paciente.
-				// TODO requerimiento en queue listo para enviar al coordinador para que modifique
-			}
+			// Coordinador me anuncia que requerimiento (request) es el siguiente para modificar al paciente.
+			// Se marca requerimiento para mandarselo al coordinador y que este lo ejecute.
+			RequerimientosServer.mgmreq.marcaParaRealizar(request);
 		}
 		
 		/** servicio para modificar registro paciente*/
 		@Override
 		public void modificaPaciente(RequerimientoMsg request, StreamObserver<RequerimientoOk> responseObserver) {
 			logger.info("Recibi coordinacion");
+			// Ya se envio al hospital cliente que su requerimiento esta listo para ser procesado (ficha reservada para este cliente)
+			// El cliente manda el requerimiento, esta funcion se lo pasa al coordinador para que realice las acciones del requerimiento.
 			int status = RequerimientosServer.coordinador.modificaFicha(request);
-			RequerimientoOk msg = RequerimientoOk.newBuilder().setStatus(status).build();
+			RequerimientoOk msg = RequerimientoOk.newBuilder().setStatus(status).setIdRequerimiento(request.getIdRequerimiento()).build();
 			responseObserver.onNext(msg);
 			responseObserver.onCompleted();
 		}

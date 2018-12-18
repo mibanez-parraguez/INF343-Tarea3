@@ -1,6 +1,6 @@
 package tarea3;
 
-import java.util.List;
+import java.util.ArrayList;
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
 
@@ -24,12 +24,12 @@ public class Requerimientos {
 		public String cargo;
 		@SerializedName("pacientes")
 		@Expose
-		public List<PacienteReq> pacientes;
+		public ArrayList<PacienteReq> pacientes;
 		
 		public String toString(){
 			return String.format("Req: %s[%d] (req0: pac[%d] = %s", this.cargo, this.id, this.pacientes.get(0).idp, this.pacientes.get(0).requerimiento);
 		}
 	}
 	
-	public List<Req> requerimientos;
+	public ArrayList<Req> requerimientos;
 }
