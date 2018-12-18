@@ -87,7 +87,7 @@ public class ManejaRequerimientos implements Runnable {
 			while(this.req_counter>0){
 				TimeUnit.SECONDS.sleep(1);
 				if(!this.haycoordinador){
-					System.out.println("[Req.whileloop] No hay coordinador");
+					System.out.println("[Req.whileloop] No hay coordinador. Iniciando eleccion!");
 					this.ctrl.postulaEleccion();
 					TimeUnit.SECONDS.sleep(20);
 				}
@@ -95,7 +95,7 @@ public class ManejaRequerimientos implements Runnable {
 					logger.info("Sin requerimientos que mandar, esperando 4 seg. (queue: "+req_counter+"-" + this.req_en_queue.size()+")");
 					TimeUnit.SECONDS.sleep(4);
 				}
-				if(this.req_por_realizar.size()==0)
+				if(this.req_por_realizar.size()==0 && this.requerimientos.size()>0)
 					this.iniciaRequerimientos();
 				if(this.req_por_realizar.size()>0)
 					this.realizaRequerimiento();
@@ -123,11 +123,11 @@ public class ManejaRequerimientos implements Runnable {
 		CountDownLatch finishLatch = this.pideFicha(msg.build());
 		try{
 			if (!finishLatch.await(20, TimeUnit.SECONDS)){
-				logger.info("No hay respuesta por parte del coordinador. Iniciando eleccion");
+				logger.info("[iniciaRequerimientos] Timeout sin respuesta por parte del coordinador.");
 				this.haycoordinador = false;
 			}
-		} catch(InterruptedException e){
-		}
+			this.shutdown();
+		} catch(InterruptedException e){}
 	}
 
 	// synchronized
@@ -137,11 +137,11 @@ public class ManejaRequerimientos implements Runnable {
 		CountDownLatch finishLatch = this.mandaRequerimiento(msg);
 		try{
 			if (!finishLatch.await(20, TimeUnit.SECONDS)){
-				logger.info("No hay respuesta por parte del coordinador. Iniciando eleccion");
+				logger.info("[realizaRequerimiento] No hay respuesta por parte del coordinador.");
 				this.haycoordinador = false;
 			}
-		} catch(InterruptedException e){
-		}
+			this.shutdown();
+		} catch(InterruptedException e){}
 	}
 
 	// synchronized
@@ -201,7 +201,7 @@ public class ManejaRequerimientos implements Runnable {
 	}
 
 	public void shutdown() throws InterruptedException {
-		logger.info("Cerrando channel");
+		logger.info("[ManejaReqs] Cerrando channel");
 		channel.shutdown().awaitTermination(5, TimeUnit.SECONDS);
 	}
 
@@ -221,11 +221,10 @@ public class ManejaRequerimientos implements Runnable {
 			}
 			@Override
 			public void onError(Throwable t) {
-				System.out.println("[pideFicha] Error");
+				System.out.println("[pideFicha] Error, coordinador no responde.");
 			}
 			@Override
 			public void onCompleted() {
-				logger.info("End pideFicha");
 				System.out.println("[pideFicha] onCompleted");
 				finishLatch.countDown();
 			}
@@ -241,7 +240,7 @@ public class ManejaRequerimientos implements Runnable {
 		int port = Integer.parseInt(dest.split(":")[1]);
 		channel = ManagedChannelBuilder.forAddress(host, port).usePlaintext().build();
 		asyncStub = ReqCoordinacionGrpc.newStub(channel);
-		logger.info("[pideFicha] Channel: " + dest);
+		logger.info("[mandaRequerimiento] Channel: " + dest);
 		asyncStub.modificaPaciente(msg, new StreamObserver<RequerimientoOk>() {
 			@Override
 			public void onNext(RequerimientoOk resp) {

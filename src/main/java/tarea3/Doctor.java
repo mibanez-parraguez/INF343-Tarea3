@@ -60,12 +60,13 @@ public class Doctor extends Empleado{
 		return 1;
 	}
 
-	public int modificaFicha(RequerimientoMsg request){
+	public int modificaFicha(RequerimientoMsg req){
 		// Se ejecuta requerimiento recibido.
 		// Si hay mas requerimientos para esta ficha, se le da acceso al siguiente en espera.
 		int status;
-		status = this.hazModificacion(request);
-		this.autorizaSiguiente(request.getIdPaciente());
+		status = this.hazModificacion(req);
+		this.logger("Requerimiento realizado!\n[hosp: "+req.getHospital()+", req: "+req.getIdRequerimiento()+"] "+req.getReqData());
+		this.autorizaSiguiente(req.getIdPaciente());
 		return status;
 	}
 
@@ -84,6 +85,10 @@ public class Doctor extends Empleado{
 			this.lockPaciente(id_paciente, id_req, hospital);
 			String dest = Doctor.config.getHospitalDir(hospital, Hospital.REQ);
 			this.daAcceso(dest, msg.build()); // Avisa al dueño (hospital).
+			try{
+				TimeUnit.SECONDS.sleep(1);
+				this.shutdown();
+			} catch(InterruptedException e){}
 		} else{
 			// No hay mas pendientes! =D
 			this.unlockPaciente(id_paciente);
@@ -205,6 +210,11 @@ public class Doctor extends Empleado{
 		this.pacientes[id].locked = false;
 		this.pacientes[id].id_req = 0;
 		this.pacientes[id].hospital = 0;
+	}
+
+	public void shutdown() throws InterruptedException {
+		logger.info("[Doctor] Cerrando channel");
+		channel.shutdown().awaitTermination(5, TimeUnit.SECONDS);
 	}
 
 	private void daAcceso(String dest, SolicitudOk msg){
