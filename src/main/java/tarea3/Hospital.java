@@ -49,12 +49,12 @@ public class Hospital {
 	public static final int BULLY = 1001;
 	public static final int LOG = 1002;
 	public static final int REQ = 1003;
-	
+
 	public static ConfigH config = null;
 	public static ControlH ctrl;
 	public static Staff staff;
 	public static Paciente[] pacientes;
-	
+
 	Hospital(String hostname) throws IOException{
 		System.out.println("Creando Hospital...");
 		this.STAFF_FILE = "staff"+hostname+".json";
@@ -77,24 +77,24 @@ public class Hospital {
 		}
 		return 0;
 	}
-	
+
 	public int getId(){ // Id de este hospital.
 		if (this.config != null)
 			return this.config.id;
 		return 0;
 	}
-	
+
 	public List<String> vecindario(){
 	// Direcciones IP de otros hospitales para eleccion bully.
 		if (this.config != null)
 			return this.config.vecindario();
 		return null;
 	}
-	
+
 	public void genCtrl(){
 		this.ctrl = new ControlH(this.vecindario(), this.staff.doctores, this.getId());
 	}
-	
+
 	class ConfigH {
 		// Maneja informacion con las direcciones ip de los otros hospitales
 		class HospData{
@@ -123,10 +123,10 @@ public class Hospital {
 		public String direccion;
 		@Expose
 		public HospData[] hospitales = null;
-		
+
 		public int extcoordinador_id;
 		public String extcoordinador_dir; //direccion ip:puerto del coordinador.
-		
+
 		/** Genera lista de vecinos (formato ip:puerto_bully) */
 		public List<String> vecindario(){
 			List<String> vecinos = new ArrayList<String>();
@@ -135,7 +135,7 @@ public class Hospital {
 					vecinos.add(h.direccion + ":" + h.puerto_bully);
 			return vecinos;
 		}
-		
+
 		/** Direccion ip:puerto del hospital y servicio especificado */
 		public String getHospitalDir(int hospital_id, int port_type){
 			for(HospData h : this.hospitales){
@@ -158,14 +158,14 @@ public class Hospital {
 			this.extcoordinador_id = id_hospital;
 			this.extcoordinador_dir = this.getHospitalDir(id_hospital, REQ);
 		}
-		
+
 		/** Coordinador en este hospital (direccion) */
 		public void guardaCoordinador(){
 			this.extcoordinador_id = this.id;
 			this.extcoordinador_dir = "127.0.0.1:"+this.puerto_bully;
 		}
 	}
-	
+
 	class ControlH {
 		// flags para eleccion bully
 		private List<String> vecinos; // dirección hospitales vecinos (IP:Puerto)
@@ -211,7 +211,7 @@ public class Hospital {
 			this.reqServer = reqServer;
 			System.out.println("[linkReqServer] reqServer:" + this.reqServer); // DEBUG
 		}
-		
+
 		public void linkReqM(ManejaRequerimientos mgmreq){
 			this.mgmreq = mgmreq;
 			System.out.println("[linkReqM] mgmreq:" + this.mgmreq); // DEBUG
@@ -220,7 +220,7 @@ public class Hospital {
 		public List<String> getVecindario(){
 			return this.vecinos;
 		}
-		
+
 		public ElectionMsg getElectionMsg(){
 			// Para anunciar candidato. Msge tiene al mejor de este hospital
 			return this.electionMsg;
@@ -250,7 +250,7 @@ public class Hospital {
 			this.en_carrera = false;
 			this.soy_coordinador = true;
 			this.hay_coordinador = true;
-			
+
 			// Gane eleccion, asumo coordinacion
 			Doctor d = Hospital.staff.hazCoordinador(this.electionMsg.getIdCandidato());
 			this.reqServer.linkCoordinador(d);
@@ -261,7 +261,7 @@ public class Hospital {
 			// client -> anunciaCoordinador
 			new Thread(bClient).start(); // Me anuncio como nuevo coordinador
 		}
-		
+
 		// synchronized
 		public void tomaCoordinadorExterno(CoordinadorMsg request){
 			this.en_eleccion = false;
@@ -272,15 +272,15 @@ public class Hospital {
 			Hospital.config.guardaCoordinador(request.getIdHospital());
 			this.mgmreq.destinoCoordinador(Hospital.config.extcoordinador_dir);
 		}
-		
+
 		public boolean yaInicioEleccion(){
 			return this.en_eleccion;
 		}
-		
+
 		public boolean sigoEnCarrera(){
 			return this.en_carrera;
 		}
-		
+
 		public int hospitalID(){
 			return this.electionMsg.getIdHospital();
 		}
@@ -307,30 +307,30 @@ public class Hospital {
 			return false;
 		}
 	}
-	
+
 	/**
 	 * Main method.
 	 */
 	public static void main(String[] args) throws FileNotFoundException, IOException, InterruptedException {
-		
+
 		Gson gson = new GsonBuilder()
 							.setPrettyPrinting()
 							.excludeFieldsWithoutExposeAnnotation()
 							.create();
-		
+
 		BufferedReader bufferedReader = null;
-		
+
 		InetAddress addr;
 		addr = InetAddress.getLocalHost();
 		hostname = addr.getHostName();
 
 		Hospital hospital = new Hospital(hostname);
-		
+
 		// PACIENTES
 		bufferedReader = new BufferedReader(new FileReader(PACIENTES_FILE));
 		hospital.pacientes = new Gson().fromJson(bufferedReader, Paciente[].class);
 		bufferedReader.close();
-		
+
 		// Revisa que ultimo elemento de pacientes no sea null.
 		System.out.println("[MAIN] last_p: " + hospital.pacientes[hospital.pacientes.length - 1]); // DEBUG
 		if(hospital.pacientes[hospital.pacientes.length - 1] == null) // VER
@@ -341,43 +341,44 @@ public class Hospital {
 		bufferedReader = new BufferedReader(new FileReader(STAFF_FILE));
 		hospital.staff = new Gson().fromJson(bufferedReader, Staff.class);
 		bufferedReader.close();
-		
+
 		//////////////
 		//
 		//
 		//////////////
-		
-		
+
+
 		// Instancia ctrl
 		hospital.genCtrl();
-		
+
 		// Servidor Bully
 		BullyServer bServer = new BullyServer(hospital.port(BULLY), Hospital.ctrl);
 		new Thread(bServer).start();
-		
+
 		// Cliente Bully (se lo pasa a ctrl.)
 		BullyClient bClient = new BullyClient(Hospital.ctrl);
 		Hospital.ctrl.linkClient(bClient);
-		
+
 		ManejaRequerimientos mreq = new ManejaRequerimientos(hospital.getId(), Hospital.ctrl);
 		RequerimientosServer reqServer = new RequerimientosServer(hospital.port(REQ), Hospital.ctrl);
 		new Thread(reqServer).start();
-		
+
 		Hospital.ctrl.linkReqM(mreq);
 		Hospital.ctrl.linkReqServer(reqServer);
-		
+
 		// if(hostname.equals("dist9")){
-		if(hospital.getId() == 9){
-			TimeUnit.SECONDS.sleep(10);
-			Hospital.ctrl.postulaEleccion();
-		}
-		
+		// if(hospital.getId() == 9){
+		// 	TimeUnit.SECONDS.sleep(10);
+		// 	Hospital.ctrl.postulaEleccion();
+		// }
+
 		// Espera 20 seg al principio para esperar primera eleccion.
 		// Al parecer no es necesario. Terminan coordinandoce igual, pero con mas msges.
- 		TimeUnit.SECONDS.sleep(20);
-		if(hospital.getId() == 10){// DEBUG ELIMINAR ESTO!!! Todas las maquinas deben iniciar mreq.
-			new Thread(mreq).start();
-		}
+ 		// TimeUnit.SECONDS.sleep(20);
+		// if(hospital.getId() == 10){// DEBUG ELIMINAR ESTO!!! Todas las maquinas deben iniciar mreq.
+		// 	new Thread(mreq).start();
+		// }
+		new Thread(mreq).start();
 	}
 }
 
@@ -391,7 +392,7 @@ class Staff {
 	@SerializedName(value = "Enfermero", alternate = {"enfermero", "Enfermeros", "enfermeros"})
 	@Expose
 	public List<Enfermero> enfermeros;
-	
+
 	public Doctor hazCoordinador(int id){
 		for (Doctor d : this.doctores){
 			if(d!=null && d.id == id){
@@ -413,13 +414,13 @@ class BullyClient implements Runnable {
 	private BullyGrpc.BullyStub asyncStub;
 	private StreamObserver<OkMsg> resp;
 	private static Hospital.ControlH ctrl;
-	
+
 	BullyClient(Hospital.ControlH ctrl){
 		this.ctrl = ctrl;
 		this.channels = new ArrayList<ManagedChannel>();
 		System.out.println("[BClient] this.ctrl " + Hospital.ctrl);
 	}
-	
+
 	@Override
 	public void run() {
 		if(this.ctrl.yaInicioEleccion()){ // Estoy en eleccion, debo mandar msg con candidato
@@ -452,7 +453,7 @@ class BullyClient implements Runnable {
 			}
 		}
 	}
-	
+
 	public synchronized void shutdown() throws InterruptedException {
 		System.out.println("Cerrando channels");
 		for (ManagedChannel channel : this.channels)
@@ -474,7 +475,7 @@ class BullyClient implements Runnable {
 			channels2.add(ManagedChannelBuilder.forAddress(host, port).usePlaintext().build());
 			asyncStub = BullyGrpc.newStub(channels2.get(channels2.size()-1)); // TODO 1 stup x channel ??
 			System.out.println("[anunciaCandidato] Channel: " + dest);
-			
+
 			asyncStub.iniciaEleccion(electionMsg, new StreamObserver<OkMsg>() {
 				@Override
 				public void onNext(OkMsg resp) {
@@ -507,7 +508,7 @@ class BullyClient implements Runnable {
 			channels.add(ManagedChannelBuilder.forAddress(host, port).usePlaintext().build());
 			asyncStub = BullyGrpc.newStub(channels.get(channels.size()-1)); // TODO 1 stup x channel ??
 			System.out.println("[anunciaCoord] Channel: " + dest);
-			
+
 			asyncStub.anuncioCoordinacion(msg, new StreamObserver<OkMsg>() {
 				@Override
 				public void onNext(OkMsg resp) {
@@ -556,7 +557,7 @@ class BullyServer implements Runnable {
 			System.out.println("[bullyserver.run] InterruptedException error");
 		}
 	}
-	
+
 	public void startServer() throws IOException {
 		server.start();
 		logger.info("Server started, listening on " + port);
@@ -588,7 +589,7 @@ class BullyServer implements Runnable {
 	// Servidor Bully eleccion
 	private static class BullyService extends BullyGrpc.BullyImplBase {
 		private static final Logger logger = Logger.getLogger(BullyService.class.getName());
-		
+
 		/** servicio eleccion */
 		@Override
 		public void iniciaEleccion(ElectionMsg request, StreamObserver<OkMsg> responseObserver) {
@@ -609,7 +610,7 @@ class BullyServer implements Runnable {
 			}
 			responseObserver.onCompleted();
 		}
-		
+
 		/** servicio anuncio coordinacion */
 		@Override
 		public void anuncioCoordinacion(CoordinadorMsg request, StreamObserver<OkMsg> responseObserver) {
@@ -650,7 +651,7 @@ class RequerimientosServer implements Runnable {
 			logger.warning("InterruptedException error");
 		}
 	}
-	
+
 	public void startServer() throws IOException {
 		System.out.println("[reqServer.start] "); // DEBUG
 		System.out.println("[reqServer.start] port: " + port); // DEBUG
@@ -679,18 +680,18 @@ class RequerimientosServer implements Runnable {
 			server.awaitTermination();
 		}
 	}
-	
+
 	public void linkCoordinador(Doctor doc){
 		this.coordinador = doc;
 	}
-	
+
 	public void linkCtrl(Hospital.ControlH ctrl){
 		this.ctrl = ctrl;
 	}
-	
+
 	private static class ReqCoordinacionService extends ReqCoordinacionGrpc.ReqCoordinacionImplBase {
 		private static final Logger logger = Logger.getLogger(ReqCoordinacionService.class.getName());
-	
+
 		/** servicio para Solicitar Ficha (acceso)*/
 		@Override
 		public void solicitarFicha(SolicitarMsg request, StreamObserver<SolicitudOk> responseObserver) {
@@ -706,7 +707,7 @@ class RequerimientosServer implements Runnable {
 			responseObserver.onCompleted();
 			System.out.println("[solicitarFicha] conexion cerrada"); // DEBUG
 		}
-		
+
 		/** servicio para recibir notificacion */
 		@Override
 		public void permiteAcceso(SolicitudOk request, StreamObserver<Empty> responseObserver) {
@@ -718,7 +719,7 @@ class RequerimientosServer implements Runnable {
 			// Se marca requerimiento para mandarselo al coordinador y que este lo ejecute.
 			RequerimientosServer.mgmreq.marcaParaRealizar(request);
 		}
-		
+
 		/** servicio para modificar registro paciente*/
 		@Override
 		public void modificaPaciente(RequerimientoMsg request, StreamObserver<RequerimientoOk> responseObserver) {
