@@ -500,6 +500,8 @@ class BullyClient implements Runnable {
 	// No llegaron respuestas OK ni mensajes con mejores candidatos.
 	// Se asume coordinacion y se envia mensaje por medio de esta funcion
 	private void anunciaCoordinador(){
+
+	try{
 		List<String> vecinos = this.ctrl.getVecindario();
 		CoordinadorMsg msg = CoordinadorMsg.newBuilder().setIdHospital(this.ctrl.hospitalID()).build();
 		for (String dest: vecinos){
@@ -508,12 +510,7 @@ class BullyClient implements Runnable {
 			channels.add(ManagedChannelBuilder.forAddress(host, port).usePlaintext().build());
 			asyncStub = BullyGrpc.newStub(channels.get(channels.size()-1)); // TODO 1 stup x channel ??
 			System.out.println("[anunciaCoord] Channel: " + dest);
-
-			try{
 				TimeUnit.SECONDS.sleep(5);
-			} catch (InterruptedException e){
-				System.out.println("InterruptedException shutdown");
-			}
 
 			asyncStub.anuncioCoordinacion(msg, new StreamObserver<OkMsg>() {
 				@Override
@@ -530,6 +527,9 @@ class BullyClient implements Runnable {
 				}
 			});
 		}
+	} catch (InterruptedException e){
+		System.out.println("InterruptedException shutdown");
+	}
 	}
 }
 
