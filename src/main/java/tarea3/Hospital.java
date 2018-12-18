@@ -508,7 +508,12 @@ class BullyClient implements Runnable {
 			channels.add(ManagedChannelBuilder.forAddress(host, port).usePlaintext().build());
 			asyncStub = BullyGrpc.newStub(channels.get(channels.size()-1)); // TODO 1 stup x channel ??
 			System.out.println("[anunciaCoord] Channel: " + dest);
-			TimeUnit.SECONDS.sleep(5);
+
+			try{
+				TimeUnit.SECONDS.sleep(5);
+			} catch (InterruptedException e){
+				System.out.println("InterruptedException shutdown");
+			}
 
 			asyncStub.anuncioCoordinacion(msg, new StreamObserver<OkMsg>() {
 				@Override
