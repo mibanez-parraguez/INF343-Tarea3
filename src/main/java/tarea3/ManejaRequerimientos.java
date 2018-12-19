@@ -30,30 +30,34 @@ public class ManejaRequerimientos implements Runnable {
 	private ManagedChannel channel;
 	private ReqCoordinacionGrpc.ReqCoordinacionStub asyncStub;
 	private String dest; // ip:puerto coordinador.
-	
+
+	public static final String MULTICAST_ADDRESS = "228.1.2.3";
+	public static final int MULTICAST_PORT = 9876;
+	public static final int COORDINADOR_PORT = 6789;
+
 	public ArrayDeque<RequerimientoMsg> requerimientos;   // Lista inicial de requerimientos.
 	public ArrayList<RequerimientoMsg> req_en_queue;      // Ficha ocupada; esperan aca hasta que el coordinador avise
 	public ArrayDeque<RequerimientoMsg> req_por_realizar; // Listos para enviar (fichas reservadas para estos requerimientos)
-	
+
 	private boolean queueing_flag = false; // no se si es necesaria
-	
+
 	private static Hospital.ControlH ctrl;
 	private boolean haycoordinador = false;
 	private int req_counter; // Total de requerimientos
-	
+
 	ManejaRequerimientos(int hospital, Hospital.ControlH ctrl) throws FileNotFoundException, IOException, InterruptedException {
 		this.ctrl = ctrl;
 		this.haycoordinador = false;
 		this.requerimientos = new ArrayDeque<RequerimientoMsg>();
 		this.req_en_queue = new ArrayList<RequerimientoMsg>();
 		this.req_por_realizar = new ArrayDeque<RequerimientoMsg>();
-		
+
 		// REQUERIMIENTOS
 		logger.info("[] reqs FILE:" + Hospital.REQUERIM_FILE);
 		BufferedReader bufferedReader = new BufferedReader(new FileReader(Hospital.REQUERIM_FILE));
 		Requerimientos requs = new Gson().fromJson(bufferedReader, Requerimientos.class);
 		bufferedReader.close();
-		
+
 		// Arma una lista con todos los requerimientos desglozados
 		// Cada requerimiento se guarda como un mensaje listo para enviar coordinador (RequerimientoMsg).
 		ArrayList<Requerimientos.Req> reqs = requs.requerimientos;

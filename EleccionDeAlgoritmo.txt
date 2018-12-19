@@ -1,0 +1,8 @@
+Log
+Método de consistencia elegido:
+  Consistencia secuencial (Primary-backup protocol/Remote-write protocols)
+Razón:
+  Aprovechar el algoritmo Bully para elegir coordinador, se utiliza el
+  coordinador como servidor primario, el cual se encarga de enviar las
+  actualizaciones a todas las máquinas y de esa forma asegurar consistencia
+  completa.
