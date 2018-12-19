@@ -45,16 +45,17 @@ public class Hospital {
 	public static String hostname = "Unknown";
 	public static final String MULTICAST_ADDRESS = "228.1.2.3";
 	public static final int MULTICAST_PORT = 9876;
+	public static final String COORDINADOR_ADDRESS = "228.3.3.3";
 	public static final int COORDINADOR_PORT = 6789;
 	public static final int BULLY = 1001;
 	public static final int LOG = 1002;
 	public static final int REQ = 1003;
-	
+
 	public static ConfigH config = null;
 	public static ControlH ctrl;
 	public static Staff staff;
 	public static Paciente[] pacientes;
-	
+
 	Hospital(String hostname) throws IOException{
 		System.out.println("Creando Hospital...");
 		this.STAFF_FILE = "staff"+hostname+".json";
@@ -246,6 +247,10 @@ public class Hospital {
 			this.soy_coordinador = true;
 			this.hay_coordinador = true;
 
+			//Soy coordinador y creo un thread que escucha los cambios desde las maquinas
+			Thread lt = new Thread(new LogThread( Hospital.MULTICAST_PORT, Hospital.COORDINADOR_ADDRESS, true));
+			lt.start();
+
 			// Gane eleccion, asumo coordinacion
 			Doctor d = Hospital.staff.hazCoordinador(this.electionMsg.getIdCandidato());
 			this.reqServer.linkCoordinador(d);
@@ -257,6 +262,10 @@ public class Hospital {
 
 		// synchronized
 		public void tomaCoordinadorExterno(CoordinadorMsg request){
+			//No soy coordinador y creo un thread que escucha los cambios desde el coordinador
+			Thread lt = new Thread(new LogThread( COORDINADOR_PORT, MULTICAST_ADDRESS, false));
+			lt.start();
+
 			this.en_eleccion = false;
 			this.en_carrera = false;
 			this.soy_coordinador = false;
@@ -319,6 +328,10 @@ public class Hospital {
 
 		Hospital hospital = new Hospital(hostname);
 
+
+		// Escucha actualizaciones
+		new Thread(new LogThread( Hospital.COORDINADOR_PORT, Hospital.MULTICAST_ADDRESS, false)).start();
+
 		// PACIENTES
 		bufferedReader = new BufferedReader(new FileReader(PACIENTES_FILE));
 		hospital.pacientes = new Gson().fromJson(bufferedReader, Paciente[].class);
@@ -369,7 +382,31 @@ public class Hospital {
 		// if(hospital.getId() == 10){// DEBUG ELIMINAR ESTO!!! Todas las maquinas deben iniciar mreq.
 		// 	new Thread(mreq).start();
 		// }
+		// Escucha actualizaciones
+		// Thread lt = new Thread(new LogThread( COORDINADOR_PORT, MULTICAST_ADDRESS, false));
+		// lt.start();
+		// Thread asd = new Thread(new LogThread( COORDINADOR_PORT, MULTICAST_ADDRESS, true, Hospital.hostname + " - Ejecucion algoritmo del maton"));
+		// asd.start();
+
+		//Ejemplo funcional
+		// Thread sdf = new Thread(new LogThread( COORDINADOR_PORT, MULTICAST_ADDRESS, false));
+		// sdf.start();
+		// Thread lt = new Thread(new LogThread( MULTICAST_PORT, COORDINADOR_ADDRESS, true));
+		// lt.start();
+		// Thread asd = new Thread(new LogThread( MULTICAST_PORT, Hospital.hostname, false, Hospital.hostname + " - Ejecucion algoritmo del maton"));
+		// asd.start();
+
+		// ???
+		// Thread sdf = new Thread(new LogThread( COORDINADOR_PORT, MULTICAST_ADDRESS, false));
+		// sdf.start();
+		// Thread lt = new Thread(new LogThread( MULTICAST_PORT, COORDINADOR_ADDRESS, true));
+		// lt.start();
+		// Thread asd = new Thread(new LogThread( COORDINADOR_PORT, Hospital.hostname, true, Hospital.hostname + " - Ejecucion algoritmo del maton"));
+		// asd.start();
+
 		new Thread(mreq).start();
+		// Envia mensaje de termino
+		// new Thread(new LogThread( Hospital.MULTICAST_PORT, Hospital.hostname, false, Hospital.hostname + " - Fin del algoritmo del maton")).start();
 	}
 }
 
@@ -409,13 +446,15 @@ class BullyClient implements Runnable {
 
 	BullyClient(Hospital.ControlH ctrl){
 		this.ctrl = ctrl;
-		this.channels = new ArrayList<ManagedChannel>(); 
+		this.channels = new ArrayList<ManagedChannel>();
 		this.channels2 = new ArrayList<ManagedChannel>();
 	}
 
 	@Override
 	public void run() {
 		if(this.ctrl.yaInicioEleccion()){ // Estoy en eleccion, debo mandar msg con candidato
+			// // Envia log a todas las máquinas
+			new Thread(new LogThread( Hospital.COORDINADOR_PORT, Hospital.MULTICAST_ADDRESS, true, Hospital.hostname + " - Ejecucion algoritmo del maton")).start();
 			CountDownLatch finishLatch = this.anunciaCandidato();
 			try {
 				if (!finishLatch.await(6, TimeUnit.SECONDS)) {
@@ -433,7 +472,7 @@ class BullyClient implements Runnable {
 			} catch (InterruptedException e){
 				System.out.println("[BullyClient] Error en comunicación - Exception\n");
 			}
-			
+			new Thread(new LogThread( Hospital.MULTICAST_PORT, Hospital.hostname, false, Hospital.hostname + " - Fin del algoritmo del maton")).start();
 		}
 		else {
 			logger.info("Anunciando coordinador\n");
@@ -453,7 +492,7 @@ class BullyClient implements Runnable {
 			channel.shutdown().awaitTermination(5, TimeUnit.SECONDS);
 		this.channels.clear();
 	}
-	
+
 	public synchronized void shutdown2() throws InterruptedException {
 		System.out.println("[BullyClient] Cerrando channels 2\n");
 		for (ManagedChannel channel : this.channels2)
@@ -702,7 +741,7 @@ class RequerimientosServer implements Runnable {
 			responseObserver.onNext(msg);
 			responseObserver.onCompleted();
 		}
-		
+
 		/** servicio para recibir notificacion */
 		@Override
 		public void permiteAcceso(SolicitudOk request, StreamObserver<Empty> responseObserver) {
