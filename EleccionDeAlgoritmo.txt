@@ -6,3 +6,9 @@ Razón:
   coordinador como servidor primario, el cual se encarga de enviar las
   actualizaciones a todas las máquinas y de esa forma asegurar consistencia
   completa.
+  
+Funcionamiento: 
+  Las maquinas anuncian los cambios, y estos son llegan al coordinador
+  por multicast, luego el coordinador anuncia a todas las maquinas los
+  cambios que se hicieron y los añade al log.
+  
