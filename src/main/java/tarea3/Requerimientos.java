@@ -7,7 +7,7 @@ import com.google.gson.annotations.SerializedName;
 public class Requerimientos {
 	
 	class PacienteReq{
-		@SerializedName("ipd")
+		@SerializedName("ip")
 		@Expose
 		public int idp;
 		@SerializedName("requerimiento")

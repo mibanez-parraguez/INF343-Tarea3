@@ -49,7 +49,7 @@ public class ManejaRequerimientos implements Runnable {
 		this.req_por_realizar = new ArrayDeque<RequerimientoMsg>();
 		
 		// REQUERIMIENTOS
-		logger.info("[] reqs FILE:" + Hospital.REQUERIM_FILE);
+		logger.info("[] reqs FILE:" + Hospital.REQUERIM_FILE+"\n");
 		BufferedReader bufferedReader = new BufferedReader(new FileReader(Hospital.REQUERIM_FILE));
 		Requerimientos requs = new Gson().fromJson(bufferedReader, Requerimientos.class);
 		bufferedReader.close();
@@ -68,7 +68,7 @@ public class ManejaRequerimientos implements Runnable {
 					if(reqs.get(i).pacientes.get(j) != null){
 						reqbd.setIdRequerimiento(this.req_counter);
 						reqbd.setHospital(hospital);
-						reqbd.setIdPaciente(reqs.get(i).pacientes.get(j).idp);
+						reqbd.setIdPaciente(reqs.get(i).pacientes.get(j).id);
 						reqbd.setReqData(reqs.get(i).pacientes.get(j).requerimiento);
 						reqbd.setEmpleado(empl.build());
 						this.requerimientos.addLast(reqbd.build());
@@ -85,14 +85,14 @@ public class ManejaRequerimientos implements Runnable {
 	public void run() {
 		try{
 			while(this.req_counter>0){
-				TimeUnit.SECONDS.sleep(1);
+				TimeUnit.SECONDS.sleep(2);
 				if(!this.haycoordinador){
-					System.out.println("[Req.whileloop] No hay coordinador. Iniciando eleccion!");
+					System.out.println("[Req.whileloop] No hay coordinador. Iniciando eleccion!\n");
 					this.ctrl.postulaEleccion();
 					TimeUnit.SECONDS.sleep(20);
 				}
 				if(this.req_por_realizar.size()==0 && this.requerimientos.size() == 0){
-					logger.info("Sin requerimientos que mandar, esperando 4 seg. (queue: "+req_counter+"-" + this.req_en_queue.size()+")");
+					logger.info("Sin requerimientos que mandar, esperando 4 seg. (queue: "+req_counter+"-" + this.req_en_queue.size()+")\n");
 					TimeUnit.SECONDS.sleep(4);
 				}
 				if(this.req_por_realizar.size()==0 && this.requerimientos.size()>0)
@@ -100,7 +100,7 @@ public class ManejaRequerimientos implements Runnable {
 				if(this.req_por_realizar.size()>0)
 					this.realizaRequerimiento();
 			}
-			logger.info("Trabajo completado, se realizaron todos los requerimientos");
+			logger.info("Trabajo completado, se realizaron todos los requerimientos\n");
 		}catch (InterruptedException e){
 		}
 	}
@@ -123,7 +123,7 @@ public class ManejaRequerimientos implements Runnable {
 		CountDownLatch finishLatch = this.pideFicha(msg.build());
 		try{
 			if (!finishLatch.await(20, TimeUnit.SECONDS)){
-				logger.info("[iniciaRequerimientos] Timeout sin respuesta por parte del coordinador.");
+				logger.info("[iniciaRequerimientos] Timeout sin respuesta por parte del coordinador.\n");
 				this.haycoordinador = false;
 			}
 			this.shutdown();
@@ -134,10 +134,20 @@ public class ManejaRequerimientos implements Runnable {
 	public void realizaRequerimiento(){
 		// Manda requerimiento ya autorizado por el coordinador. (Ficha/paciente esta reservada para este requerimiento)
 		RequerimientoMsg msg = this.req_por_realizar.peekFirst();
+		
+// 		// DEBUG Usa este bloque para detener la maquina especificada por la id mas abajo.
+// 		//       esto bloquea efectivamente una ficha y obliga a usar las colas para 
+// 		//       maquinas que quieran acceder esta misma ficha. 
+// 		try{ 
+// 			int idh = msg.getHospital();          // DEBUG
+// 			if(idh == 10) // (id: 9, 10, 11 o 12) // DEBUG 
+// 			TimeUnit.SECONDS.sleep(30);           // DEBUG
+// 		} catch(InterruptedException e){}        // DEBUG
+		
 		CountDownLatch finishLatch = this.mandaRequerimiento(msg);
 		try{
 			if (!finishLatch.await(20, TimeUnit.SECONDS)){
-				logger.info("[realizaRequerimiento] No hay respuesta por parte del coordinador.");
+				logger.info("[realizaRequerimiento] No hay respuesta por parte del coordinador.\n");
 				this.haycoordinador = false;
 			}
 			this.shutdown();
@@ -150,11 +160,11 @@ public class ManejaRequerimientos implements Runnable {
 		// Se hicieron los cambios si eran pertinentes.
 		// status = 2 implica un enfermero o paramedico intentando cambiar algo que no le corresponde.
 		if (resp.getStatus() == 1){
-			logger.info("Requerimiento id: " + resp.getIdRequerimiento() + " COMPLETADO.");
+			logger.info("Requerimiento id: " + resp.getIdRequerimiento() + " COMPLETADO.\n");
 		} else if(resp.getStatus() == 2){
-			logger.info("Requerimiento id: " + resp.getIdRequerimiento() + " ACCESO DENEGADO.");
+			logger.info("Requerimiento id: " + resp.getIdRequerimiento() + " ACCESO DENEGADO.\n");
 		} else{
-			logger.warning("*** codigo desconocido - status: " + resp.getStatus());
+			logger.warning("*** codigo desconocido - status: " + resp.getStatus()+"\n");
 		}
 		// con status 1 o 2 se elimina igual el req (ya fue procesado).
 		this.req_por_realizar.removeFirst();
@@ -165,9 +175,8 @@ public class ManejaRequerimientos implements Runnable {
 	public void marcaParaRealizar(SolicitudOk req){
 		// Servidor anuncia que se desocupo la ficha y el requerimiento req es el siguiente.
 		// Se pasa requerimento de lista de espera (req_en_queue) a lista para ejecutar (req_por_realizar).
-// 		if(this.queueing_flag = true)
-// 			wait();
 		this.queueing_flag = true;
+		logger.info("Requerimiento id: " + req.getIdRequerimiento() + " pasando de lista de espera a lista de ejecucion.\n");
 		int i = 0;
 		for(i=0; i<this.req_en_queue.size(); i++)
 			if(this.req_en_queue.get(i).getIdRequerimiento() == req.getIdRequerimiento())
@@ -187,6 +196,11 @@ public class ManejaRequerimientos implements Runnable {
 	public void mandaQueue(){
 		// Ficha ocupada, manda requerimiento a lista de espera.
 		this.req_en_queue.add(this.requerimientos.pollFirst());
+		
+		// DEBUG dunp queue
+// 		System.out.println("[MyQUEUE]");
+// 		for(int i=0; i<this.req_en_queue.size(); i++)
+// 			System.out.println(this.req_en_queue.get(i).toString());
 	}
 
 	public void handleResp(SolicitudOk resp){
@@ -196,12 +210,13 @@ public class ManejaRequerimientos implements Runnable {
 			this.marcaParaRealizar();
 		}
 		if(resp.getStatus()==2){
+			logger.info("[pideFicha.handler] Ficha LOCKED.\nPasando requerimiento "+resp.getIdRequerimiento()+" a Queue.\n");
 			this.mandaQueue();
 		}
 	}
 
 	public void shutdown() throws InterruptedException {
-		logger.info("[ManejaReqs] Cerrando channel");
+		logger.info("[ManejaReqs] Cerrando channel\n");
 		channel.shutdown().awaitTermination(5, TimeUnit.SECONDS);
 	}
 
@@ -212,20 +227,20 @@ public class ManejaRequerimientos implements Runnable {
 		int port = Integer.parseInt(dest.split(":")[1]);
 		channel = ManagedChannelBuilder.forAddress(host, port).usePlaintext().build();
 		asyncStub = ReqCoordinacionGrpc.newStub(channel);
-		logger.info("[pideFicha] Channel: " + dest);
+		logger.info("[pideFicha] Channel: " + dest+"\n");
 		asyncStub.solicitarFicha(msg, new StreamObserver<SolicitudOk>() {
 			@Override
 			public void onNext(SolicitudOk resp) {
-				System.out.println("[pideFicha] onNext");
+				System.out.println("[pideFicha] onNext\n");
 				handleResp(resp);
 			}
 			@Override
 			public void onError(Throwable t) {
-				System.out.println("[pideFicha] Error, coordinador no responde.");
+				System.out.println("[pideFicha] Error, coordinador no responde.\n");
 			}
 			@Override
 			public void onCompleted() {
-				System.out.println("[pideFicha] onCompleted");
+				System.out.println("[pideFicha] onCompleted\n");
 				finishLatch.countDown();
 			}
 		});
@@ -240,7 +255,7 @@ public class ManejaRequerimientos implements Runnable {
 		int port = Integer.parseInt(dest.split(":")[1]);
 		channel = ManagedChannelBuilder.forAddress(host, port).usePlaintext().build();
 		asyncStub = ReqCoordinacionGrpc.newStub(channel);
-		logger.info("[mandaRequerimiento] Channel: " + dest);
+		logger.info("[mandaRequerimiento] Channel: " + dest+"\n");
 		asyncStub.modificaPaciente(msg, new StreamObserver<RequerimientoOk>() {
 			@Override
 			public void onNext(RequerimientoOk resp) {
@@ -248,11 +263,10 @@ public class ManejaRequerimientos implements Runnable {
 			}
 			@Override
 			public void onError(Throwable t) {
-				System.out.println("[mandaRequerimiento] Coordinador no contesta");
+				System.out.println("[mandaRequerimiento] Coordinador no contesta\n");
 			}
 			@Override
 			public void onCompleted() {
-				logger.info("End.");
 				finishLatch.countDown();
 			}
 		});

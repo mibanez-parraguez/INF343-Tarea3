@@ -77,6 +77,10 @@ public class Doctor extends Empleado{
 		// Ve siguiente requerimiento en cola para el paciente y se avisa al dueño.
 		// Reserva ficha (locked con datos del sgte requerimiento).
 		SolicitarMsg req = this.coordinacion.getSiguiente(id_paciente);
+		
+		if(req != null) // DEBUG
+			System.out.println("\n[authSgte] sgte req:\n"+req.toString()); // DEBUG
+		
 		if(req != null){
 			int id_req = req.getIdRequerimiento();
 			int hospital = req.getHospital();
@@ -235,11 +239,11 @@ public class Doctor extends Empleado{
 			}
 			@Override
 			public void onError(Throwable t) {
-				logger.info("Sin respuesta Empty");
+				System.out.println("Sin respuesta Empty");
 			}
 			@Override
 			public void onCompleted() {
-				logger.info("Llego respuesta Empty");
+				System.out.println("Llego respuesta Empty");
 			}
 		});
 	}
@@ -277,6 +281,23 @@ class Coordinacion {
 			this.queues.get(id).enfermeros.addLast(req);
 		if(cargo.equals("paramedico"))
 			this.queues.get(id).paramedicos.addLast(req);
+			
+//		// DEBUG show queues para paciente_id
+// 		System.out.println(" --- DUMP queues paciente :" +id+" ---");
+// 		SolicitarMsg[] y;
+// 		System.out.println("Doctores:");
+// 		y = this.queues.get(id).medicos.toArray(new SolicitarMsg[0]);
+// 		for(int i=0; i<y.length; i++)
+// 			System.out.println(y[i].toString());
+// 		System.out.println("Enfermeros");
+// 		y = this.queues.get(id).enfermeros.toArray(new SolicitarMsg[0]);
+// 		for(int i=0; i<y.length; i++)
+// 			System.out.println(y[i].toString());
+// 		System.out.println("Paramedicos");
+// 		y = this.queues.get(id).paramedicos.toArray(new SolicitarMsg[0]);
+// 		for(int i=0; i<y.length; i++)
+// 			System.out.println(y[i].toString());
+// 		System.out.println(" --- ");
 	}
 	
 	public SolicitarMsg getSiguiente(int id_paciente){
