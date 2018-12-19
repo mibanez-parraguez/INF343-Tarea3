@@ -421,7 +421,7 @@ class BullyClient implements Runnable {
 	public void run() {
 		if(this.ctrl.yaInicioEleccion()){ // Estoy en eleccion, debo mandar msg con candidato
 			// Envia log a todas las máquinas
-      Thread lt = new Thread(new LogThread( COORDINADOR_PORT, Hospital.hostname, true, Hospital.hostname + " - Ejecucion algoritmo del maton"));
+      Thread lt = new Thread(new LogThread( Hospital.COORDINADOR_PORT, Hospital.hostname, true, Hospital.hostname + " - Ejecucion algoritmo del maton"));
       lt.start();
 			CountDownLatch finishLatch = this.anunciaCandidato();
 			try {
