@@ -265,7 +265,7 @@ public class Hospital {
 			//No soy coordinador y creo un thread que escucha los cambios desde el coordinador
 			Thread lt = new Thread(new LogThread( COORDINADOR_PORT, MULTICAST_ADDRESS, false));
 			lt.start();
-			
+
 			this.en_eleccion = false;
 			this.en_carrera = false;
 			this.soy_coordinador = false;
@@ -327,6 +327,10 @@ public class Hospital {
 		hostname = addr.getHostName();
 
 		Hospital hospital = new Hospital(hostname);
+
+
+		// Escucha actualizaciones
+		new Thread(new LogThread( Hospital.COORDINADOR_PORT, Hospital.MULTICAST_ADDRESS, false)).start();
 
 		// PACIENTES
 		bufferedReader = new BufferedReader(new FileReader(PACIENTES_FILE));
@@ -400,11 +404,9 @@ public class Hospital {
 		// Thread asd = new Thread(new LogThread( COORDINADOR_PORT, Hospital.hostname, true, Hospital.hostname + " - Ejecucion algoritmo del maton"));
 		// asd.start();
 
-		// Escucha actualizaciones
-		Thread lt = new Thread(new LogThread( COORDINADOR_PORT, MULTICAST_ADDRESS, false));
-		lt.start();
-
 		new Thread(mreq).start();
+		// Envia mensaje de termino
+		// new Thread(new LogThread( Hospital.MULTICAST_PORT, Hospital.hostname, false, Hospital.hostname + " - Fin del algoritmo del maton")).start();
 	}
 }
 
@@ -453,8 +455,7 @@ class BullyClient implements Runnable {
 	public void run() {
 		if(this.ctrl.yaInicioEleccion()){ // Estoy en eleccion, debo mandar msg con candidato
 			// // Envia log a todas las máquinas
-			Thread lt = new Thread(new LogThread( Hospital.COORDINADOR_PORT, Hospital.MULTICAST_ADDRESS, true, Hospital.hostname + " - Ejecucion algoritmo del maton"));
-			lt.start();
+			new Thread(new LogThread( Hospital.COORDINADOR_PORT, Hospital.MULTICAST_ADDRESS, true, Hospital.hostname + " - Ejecucion algoritmo del maton")).start();
 			CountDownLatch finishLatch = this.anunciaCandidato();
 			try {
 				if (!finishLatch.await(6, TimeUnit.SECONDS)) {
@@ -472,7 +473,7 @@ class BullyClient implements Runnable {
 			} catch (InterruptedException e){
 				System.out.println("[BullyClient] Error en comunicación - Exception");
 			}
-
+			new Thread(new LogThread( Hospital.MULTICAST_PORT, Hospital.hostname, false, Hospital.hostname + " - Fin del algoritmo del maton")).start();
 		}
 		else {
 			logger.info("Anunciando coordinador");
