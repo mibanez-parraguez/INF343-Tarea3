@@ -7,7 +7,7 @@ __Autores__
 
 ---
 
-Las máquinas correspondientes son dist09-dist10-dist11-dist12, una vez dentro de la máquina utilizar
+Las máquinas correspondientes son dist09-dist10-dist11-dist12 (usuario y contraseña sin cambios), una vez dentro de la máquina utilizar:
 * Carpeta raiz:
 `$ cd INF343-Tarea3`
 
