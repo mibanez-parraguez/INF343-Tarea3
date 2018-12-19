@@ -9,7 +9,7 @@ public class Requerimientos {
 	class PacienteReq{
 		@SerializedName("ip")
 		@Expose
-		public int idp;
+		public int id;
 		@SerializedName("requerimiento")
 		@Expose
 		public String requerimiento;
@@ -27,7 +27,7 @@ public class Requerimientos {
 		public ArrayList<PacienteReq> pacientes;
 		
 		public String toString(){
-			return String.format("Req: %s[%d] (req0: pac[%d] = %s", this.cargo, this.id, this.pacientes.get(0).idp, this.pacientes.get(0).requerimiento);
+			return String.format("Req: %s[%d] (req0: pac[%d] = %s", this.cargo, this.id, this.pacientes.get(0).id, this.pacientes.get(0).requerimiento);
 		}
 	}
 	

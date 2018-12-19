@@ -425,7 +425,7 @@ class Staff {
 		for (Doctor d : this.doctores){
 			if(d!=null && d.id == id){
 				System.out.println("[staff] Haciendo coordinador" + d.toString()+"\n");
-				d.asumeCoordinacion(Hospital.pacientes, Hospital.config+"\n");
+				d.asumeCoordinacion(Hospital.pacientes, Hospital.config);
 				System.out.println("[staff] Coordinador" + d.toString()+"\n");
 				return d;
 			}
@@ -518,7 +518,7 @@ class BullyClient implements Runnable {
 				@Override
 				public void onNext(OkMsg resp) {
 					if(resp.getOk()==1){ //si ok = 0, se considera como si no hubiese llegado respuesta.
-						System.out.println("Llego respuesta OK\m");
+						System.out.println("Llego respuesta OK\n");
 						finishLatch.countDown(); // TODO + 1 llamado?
 					}
 				}
