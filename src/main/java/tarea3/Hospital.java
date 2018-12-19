@@ -190,7 +190,7 @@ public class Hospital {
 							.filter(d -> d.experiencia == max_exp && d.estudios == max_estudios)
 							.max(Comparator.comparing(d -> d.id))
 							.get();
-			System.out.println("[ctrl.candidatos] (op3.1) doc: " +doc.toString()); // DEBUG
+			System.out.println("[ctrl.candidatos] (op3.1) doc: " +doc.toString()+"\n"); // DEBUG
 			this.electionMsg = ElectionMsg.newBuilder()
 									.setIdHospital(idHospital)
 									.setIdCandidato(doc.id)
@@ -270,7 +270,7 @@ public class Hospital {
 			this.en_carrera = false;
 			this.soy_coordinador = false;
 			this.hay_coordinador = true;
-			System.out.println("[coordinador externo] Hay que tomar coordinador en hospital: " + request.getIdHospital());
+			System.out.println("[coordinador externo] Hay que tomar coordinador en hospital: " + request.getIdHospital()+"\n");
 			Hospital.config.guardaCoordinador(request.getIdHospital());
 			this.mgmreq.destinoCoordinador(Hospital.config.extcoordinador_dir);
 		}
@@ -364,7 +364,7 @@ public class Hospital {
 		Hospital.ctrl.linkClient(bClient);
 
 		ManejaRequerimientos mreq = new ManejaRequerimientos(hospital.getId(), Hospital.ctrl);
-		RequerimientosServer reqServer = new RequerimientosServer(hospital.port(REQ), Hospital.ctrl);
+		RequerimientosServer reqServer = new RequerimientosServer(hospital.port(REQ), Hospital.ctrl, mreq);
 		new Thread(reqServer).start();
 
 		Hospital.ctrl.linkReqM(mreq);
@@ -424,13 +424,13 @@ class Staff {
 	public Doctor hazCoordinador(int id){
 		for (Doctor d : this.doctores){
 			if(d!=null && d.id == id){
-				System.out.println("[staff] Haciendo coordinador" + d.toString());
+				System.out.println("[staff] Haciendo coordinador" + d.toString()+"\n");
 				d.asumeCoordinacion(Hospital.pacientes, Hospital.config);
-				System.out.println("[staff] Coordinador" + d.toString());
+				System.out.println("[staff] Coordinador" + d.toString()+"\n");
 				return d;
 			}
 		}
-		System.out.println("[Staff.hazCoordinador] Error no debi haber llegado aca)");
+		System.out.println("[Staff.hazCoordinador] Error no debi haber llegado aca)\n");
 		return null;
 	}
 }
@@ -448,7 +448,6 @@ class BullyClient implements Runnable {
 		this.ctrl = ctrl;
 		this.channels = new ArrayList<ManagedChannel>();
 		this.channels2 = new ArrayList<ManagedChannel>();
-		System.out.println("[BClient] this.ctrl " + Hospital.ctrl);
 	}
 
 	@Override
@@ -460,43 +459,43 @@ class BullyClient implements Runnable {
 			try {
 				if (!finishLatch.await(6, TimeUnit.SECONDS)) {
 					System.out.println("[BullyClient] (TIMEOUT) latch: \n>  " + finishLatch.toString()); // DEBUG
-					logger.info("Timeout Sin respuestas OK, asumiendo coordinacion");
+					logger.info("Timeout Sin respuestas OK, asumiendo coordinacion\n");
 					if(this.ctrl.sigoEnCarrera())
 						this.shutdown();
 						this.ctrl.iniciaCoordinacion();
 				} else{
 					System.out.println("[BullyClient] (got respones) latch: \n>  " + finishLatch.toString()); // DEBUG
-					logger.info("LLego respuesta Ok, abandonando eleccion");
+					logger.info("LLego respuesta Ok, abandonando eleccion\n");
 					this.shutdown();
 					this.ctrl.abandonaEleccion();
 				}
 			} catch (InterruptedException e){
-				System.out.println("[BullyClient] Error en comunicación - Exception");
+				System.out.println("[BullyClient] Error en comunicación - Exception\n");
 			}
 			// Anuncia termino del algoritmo del maton
 			new Thread(new LogThread( Hospital.MULTICAST_PORT, Hospital.hostname, false, Hospital.hostname + " - Fin del algoritmo del maton")).start();
 		}
 		else {
-			logger.info("Anunciando coordinador");
+			logger.info("Anunciando coordinador\n");
 			this.anunciaCoordinador();
 			try{
 				TimeUnit.SECONDS.sleep(1); // TODO en las maquinas puede que haya que subir.
 				this.shutdown2(); // VER
 			} catch (InterruptedException e){
-				System.out.println("[BullyClient] InterruptedException shutdown");
+				System.out.println("[BullyClient] InterruptedException shutdown\n");
 			}
 		}
 	}
 
 	public synchronized void shutdown() throws InterruptedException {
-		System.out.println("[BullyClient] Cerrando channels");
+		System.out.println("[BullyClient] Cerrando channels\n");
 		for (ManagedChannel channel : this.channels)
 			channel.shutdown().awaitTermination(5, TimeUnit.SECONDS);
 		this.channels.clear();
 	}
 
 	public synchronized void shutdown2() throws InterruptedException {
-		System.out.println("[BullyClient] Cerrando channels 2");
+		System.out.println("[BullyClient] Cerrando channels 2\n");
 		for (ManagedChannel channel : this.channels2)
 			channel.shutdown().awaitTermination(5, TimeUnit.SECONDS);
 		this.channels2.clear();
@@ -514,19 +513,19 @@ class BullyClient implements Runnable {
 			int port = Integer.parseInt(dest.split(":")[1]);
 			channels2.add(ManagedChannelBuilder.forAddress(host, port).usePlaintext().build());
 			asyncStub = BullyGrpc.newStub(channels2.get(channels2.size()-1)); // TODO 1 stub x channel ??
-			System.out.println("[anunciaCandidato] Channel: " + dest);
+			System.out.println("[anunciaCandidato] Channel: " + dest+"\n");
 
 			asyncStub.iniciaEleccion(electionMsg, new StreamObserver<OkMsg>() {
 				@Override
 				public void onNext(OkMsg resp) {
 					if(resp.getOk()==1){ //si ok = 0, se considera como si no hubiese llegado respuesta.
-						System.out.println("Llego respuesta OK");
+						System.out.println("Llego respuesta OK\n");
 						finishLatch.countDown(); // TODO + 1 llamado?
 					}
 				}
 				@Override
 				public void onError(Throwable t) {
-					System.out.println("Sin respuesta OK");
+					System.out.println("Sin respuesta OK\n");
 				}
 				@Override
 				public void onCompleted() {
@@ -547,7 +546,8 @@ class BullyClient implements Runnable {
 			int port = Integer.parseInt(dest.split(":")[1]);
 			channels.add(ManagedChannelBuilder.forAddress(host, port).usePlaintext().build());
 			asyncStub = BullyGrpc.newStub(channels.get(channels.size()-1)); // TODO 1 stup x channel ??
-			System.out.println("[anunciaCoord] Channel: " + dest);
+			System.out.println("[anunciaCoord] Channel: " + dest+"\n");
+
 			asyncStub.anuncioCoordinacion(msg, new StreamObserver<OkMsg>() {
 				@Override
 				public void onNext(OkMsg resp) {
@@ -555,11 +555,11 @@ class BullyClient implements Runnable {
 				}
 				@Override
 				public void onError(Throwable t) {
-					System.out.println("Sin respuesta OK");
+					System.out.println("Sin respuesta OK\n");
 				}
 				@Override
 				public void onCompleted() {
-					System.out.println("Llego respuesta OK");
+					System.out.println("Llego respuesta OK\n");
 				}
 			});
 		}
@@ -599,14 +599,14 @@ class BullyServer implements Runnable {
 
 	public void startServer() throws IOException {
 		server.start();
-		logger.info("Server started, listening on " + port);
+		logger.info("Server started, listening on " + port+"\n");
 		Runtime.getRuntime().addShutdownHook(new Thread() {
 			@Override
 			public void run() {
 				// Use stderr here since the logger may has been reset by its JVM shutdown hook.
-				System.err.println("*** shutting down gRPC server since JVM is shutting down");
-				//BullyServer.this.stopServer(); //TODO
-				System.err.println("*** server shut down");
+				System.err.println("\n*** shutting down gRPC server since JVM is shutting down");
+				BullyServer.this.stopServer(); // <-
+				System.err.println("*** server shut down\n");
 			}
 		});
 	}
@@ -632,15 +632,15 @@ class BullyServer implements Runnable {
 		/** servicio eleccion */
 		@Override
 		public void iniciaEleccion(ElectionMsg request, StreamObserver<OkMsg> responseObserver) {
-			logger.info("Recibi candidato");
+			logger.info("Recibi candidato\n");
 			if(BullyServer.ctrl.soyMasFuerte(request)){ // si lo soy, envio OK y postuto a proc de eleccion.
 				OkMsg msg = OkMsg.newBuilder().setOk(1).build();
 				responseObserver.onNext(msg);
 				if(!BullyServer.ctrl.yaInicioEleccion()){
-					logger.info("Soy mejor, entro en carrera");
+					logger.info("Soy mejor, entro en carrera\n");
 					BullyServer.ctrl.postulaEleccion();
 				} else{
-					logger.info("Soy mejor, pero ya estoy en carrera");
+					logger.info("Soy mejor, pero ya estoy en carrera\n");
 				}
 			}else{// Ok = 0, simula que no se da respuesta. Grpc lanza error si intento cerrar asi no mas.
 				OkMsg msg = OkMsg.newBuilder().setOk(0).build(); // Ok = 0
@@ -653,7 +653,7 @@ class BullyServer implements Runnable {
 		/** servicio anuncio coordinacion */
 		@Override
 		public void anuncioCoordinacion(CoordinadorMsg request, StreamObserver<OkMsg> responseObserver) {
-			logger.info("Recibi coordinacion");
+			logger.info("Recibi coordinacion\n");
 			BullyServer.ctrl.tomaCoordinadorExterno(request);
 			OkMsg msg = OkMsg.newBuilder().setOk(1).build();
 			responseObserver.onNext(msg);
@@ -671,9 +671,10 @@ class RequerimientosServer implements Runnable {
 	private static ManejaRequerimientos mgmreq;
 	private static boolean shut = false;
 
-	RequerimientosServer(int port, Hospital.ControlH ctrl) {
+	RequerimientosServer(int port, Hospital.ControlH ctrl, ManejaRequerimientos mgmreq) {
 		this.ctrl = ctrl;
 		this.port = port;
+		this.mgmreq = mgmreq;
 		server = ServerBuilder.forPort(port)
 					.addService(new ReqCoordinacionService())
 					.build();
@@ -685,24 +686,23 @@ class RequerimientosServer implements Runnable {
 			this.startServer();
 			this.blockUntilShutdown();
 		} catch (IOException e){
-			logger.warning("IO error");
+			logger.warning("[ReqServer] IO error\n");
 		} catch (InterruptedException e){
-			logger.warning("InterruptedException error");
+			logger.warning("[ReqServer] error\n");
 		}
 	}
 
 	public void startServer() throws IOException {
-		System.out.println("[reqServer.start] "); // DEBUG
-		System.out.println("[reqServer.start] port: " + port); // DEBUG
+		System.out.println("[reqServer.start] port: " + port+"\n"); // DEBUG
 		server.start();
-		logger.info("Server started, listening on " + port);
+		logger.info("Server started, listening on " + port+"\n");
 		Runtime.getRuntime().addShutdownHook(new Thread() {
 			@Override
 			public void run() {
 				// Use stderr here since the logger may has been reset by its JVM shutdown hook.
-				System.err.println("*** shutting down gRPC server since JVM is shutting down");
+				System.err.println("\n*** shutting down gRPC server since JVM is shutting down");
 				RequerimientosServer.this.stopServer(); // TODO VER
-				System.err.println("*** server shut down");
+				System.err.println("*** server shut down\n");
 			}
 		});
 	}
@@ -734,7 +734,7 @@ class RequerimientosServer implements Runnable {
 		/** servicio para Solicitar Ficha (acceso)*/
 		@Override
 		public void solicitarFicha(SolicitarMsg request, StreamObserver<SolicitudOk> responseObserver) {
-			logger.info("Recibi solicitud acceso a paciente: "+request.getIdPaciente()+"(de hospital: "+request.getHospital()+")");
+			logger.info("Recibi solicitud acceso a paciente: "+request.getIdPaciente()+"(de hospital: "+request.getHospital()+")\n");
 			// Soy coordinador y recibo una solicitud para acceder a una ficha.
 			// Doctor coordinador checkea si la ficha esta disponible o no (status = 1, libre. status = 2, no).
 			int status = RequerimientosServer.coordinador.solicitaFicha(request);
@@ -746,19 +746,19 @@ class RequerimientosServer implements Runnable {
 		/** servicio para recibir notificacion */
 		@Override
 		public void permiteAcceso(SolicitudOk request, StreamObserver<Empty> responseObserver) {
-			logger.info("Recibiendo notificacion de acceso concedido (req: "+request.getIdRequerimiento()+")");
-			Empty msg = Empty.newBuilder().build();
-			responseObserver.onNext(msg);
-			responseObserver.onCompleted();
+			logger.info("Recibiendo notificacion de acceso concedido (req: "+request.getIdRequerimiento()+")\n");
 			// Coordinador me anuncia que requerimiento (request) es el siguiente para modificar al paciente.
 			// Se marca requerimiento para mandarselo al coordinador y que este lo ejecute.
 			RequerimientosServer.mgmreq.marcaParaRealizar(request);
+			Empty msg = Empty.newBuilder().build();
+			responseObserver.onNext(msg);
+			responseObserver.onCompleted();
 		}
 
 		/** servicio para modificar registro paciente*/
 		@Override
 		public void modificaPaciente(RequerimientoMsg request, StreamObserver<RequerimientoOk> responseObserver) {
-			logger.info("Recibi mandato de requerimiento (req: "+request.getIdRequerimiento()+", hosp: "+request.getHospital()+")");
+			logger.info("Recibi mandato de requerimiento (req: "+request.getIdRequerimiento()+", hosp: "+request.getHospital()+")\n");
 			// Ya se envio al hospital cliente que su requerimiento esta listo para ser procesado (ficha reservada para este cliente)
 			// El cliente manda el requerimiento, esta funcion se lo pasa al coordinador para que realice las acciones del requerimiento.
 			int status = RequerimientosServer.coordinador.modificaFicha(request);
