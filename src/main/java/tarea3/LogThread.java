@@ -201,7 +201,7 @@ class LogThread implements Runnable {
   public void ActualizarLog(String mensaje) {
     try {
       String path = System.getProperty("user.dir");
-      fh = new FileHandler(path+"/log.log");
+      fh = new FileHandler(path+"/log.log", true);
       logger.addHandler(fh);
       SimpleFormatter formatter = new SimpleFormatter();
       fh.setFormatter(formatter);
