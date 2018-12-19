@@ -19,6 +19,7 @@ class LogThread implements Runnable {
   private Thread t;
 	public static final String MULTICAST_ADDRESS = "228.1.2.3";
 	public static final int MULTICAST_PORT = 9876;
+	public static final String COORDINADOR_ADDRESS = "228.3.3.3";
 	public static final int COORDINADOR_PORT = 6789;
   private int mcPort;
   private String mcIPStr;
@@ -37,7 +38,6 @@ class LogThread implements Runnable {
     this.enviar = true;
     this.mensaje = mensaje;
     this.receptorCoordinador = false;
-    System.out.println("[Log] Iniciando enviar actualizacions, soy coordinador? " + soyCoordinador);
   }
   // Constructor para LogThread que espera actualizaciones
   LogThread(int puerto, String direccion, boolean soyCoordinador) {
@@ -46,7 +46,6 @@ class LogThread implements Runnable {
     this.soyCoordinador = soyCoordinador;
     this.enviar = false;
     this.receptorCoordinador = false;
-    System.out.println("[Log] Iniciando listener actualizacions, soy coordinador? " + soyCoordinador);
   }
   // Constructor para LogThread que espera actualizaciones si es coordinador
   // private LogThread(int puerto, String direccion, boolean soyCoordinador, boolean receptorCoordinador) {
@@ -110,6 +109,7 @@ class LogThread implements Runnable {
       DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, IPAddress, mcPort);
       clientSocket.send(sendPacket);
       System.out.println("[Log] Mensaje enviado a coordinador: " + entrada);
+      System.out.println("[Log] Mensaje enviado a coordinador: " + IPAddress + " port: " + mcPort);
       clientSocket.close();
     } catch (UnknownHostException e) {
       System.out.println("[Log] Error al actualizar Log, host desconocido: ");
@@ -184,7 +184,7 @@ class LogThread implements Runnable {
         String msg = new String( receivePacket.getData());
         System.out.println("[Log] Actualizacion recibida en coordinador:" + msg);
         // Enviar mensaje al grupo multicast
-        LogThread lt_enviar_multi = new LogThread(MULTICAST_PORT, MULTICAST_ADDRESS, true, msg);
+        LogThread lt_enviar_multi = new LogThread(COORDINADOR_PORT, MULTICAST_ADDRESS, true, msg);
     		lt_enviar_multi.start();
         System.out.println("[Log] Coordinador enviando actualizacion a maquinas:" + msg);
       }
