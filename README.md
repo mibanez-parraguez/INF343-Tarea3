@@ -7,11 +7,17 @@ __Autores__
 
 ---
 
+Las máquinas correspondientes son dist09-dist10-dist11-dist12, una vez dentro de la máquina utilizar
+* Carpeta raiz:
+`$ cd INF343-Tarea3`
+
 * Para compilar (desde raíz): 
 `$ ./gradlew installDist`
 
 * Para ejecutar (raíz): 
 `$ ./build/install/tarea3/bin/tarea3`
+
+En el archivo 'EleccionDeAlgoritmo.txt' se encuentra la explicación de la elección del algoritmo.
 
 ---
 
