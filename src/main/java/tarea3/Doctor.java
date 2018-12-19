@@ -55,7 +55,7 @@ public class Doctor extends Empleado{
 			new Thread(new LogThread( Hospital.MULTICAST_PORT, Hospital.hostname, false, request.getEmpleado().getCargo() + " " + request.getEmpleado().getId() + " esperando.")).start();
 			return 2;
 		}
-		new Thread(new LogThread( Hospital.MULTICAST_PORT, Hospital.hostname, false, "Acceso de " + request.getEmpleado().getCargo() + " " + request.getEmpleado().getId() + " a la ficha del paciente " + id)).start();
+		new Thread(new LogThread( Hospital.MULTICAST_PORT, Hospital.hostname, false, "Acceso de " + request.getEmpleado().getCargo() + " " + request.getEmpleado().getId() + " a la ficha del paciente " + request.getIdPaciente())).start();
 		int id_req = request.getIdRequerimiento();
 		int hospital = request.getHospital();
 		this.lockPaciente(id, id_req, hospital);
@@ -79,10 +79,10 @@ public class Doctor extends Empleado{
 		// Ve siguiente requerimiento en cola para el paciente y se avisa al dueño.
 		// Reserva ficha (locked con datos del sgte requerimiento).
 		SolicitarMsg req = this.coordinacion.getSiguiente(id_paciente);
-		
+
 		if(req != null) // DEBUG
 			System.out.println("\n[authSgte] sgte req:\n"+req.toString()); // DEBUG
-		
+
 		if(req != null){
 			int id_req = req.getIdRequerimiento();
 			int hospital = req.getHospital();
@@ -117,7 +117,7 @@ public class Doctor extends Empleado{
 		String op = request.getReqData().split(" ")[0];     // opcion / accion del requerimiento
 		String cont = request.getReqData().split(" ")[1]; // contenido de la accion.
 		Paciente p = this.pacientes[id];
-		new Thread(new LogThread( Hospital.MULTICAST_PORT, Hospital.hostname, false, request.getEmpleado().getCargo() + " " + request.getEmpleado().getId() + " realizando operacion (" + op + ") al paciente" + id)).start();
+		new Thread(new LogThread( Hospital.MULTICAST_PORT, Hospital.hostname, false, request.getEmpleado().getCargo() + " " + request.getEmpleado().getId() + " realizando operacion (" + op + ") al paciente " + id)).start();
 		// Enfermedades
 		if(op.equals("diagnosticar")){
 			p.enfermedades.add(cont);
@@ -284,7 +284,7 @@ class Coordinacion {
 			this.queues.get(id).enfermeros.addLast(req);
 		if(cargo.equals("paramedico"))
 			this.queues.get(id).paramedicos.addLast(req);
-			
+
 //		// DEBUG show queues para paciente_id
 // 		System.out.println(" --- DUMP queues paciente :" +id+" ---");
 // 		SolicitarMsg[] y;

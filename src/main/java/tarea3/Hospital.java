@@ -546,7 +546,7 @@ class BullyClient implements Runnable {
 			int port = Integer.parseInt(dest.split(":")[1]);
 			channels.add(ManagedChannelBuilder.forAddress(host, port).usePlaintext().build());
 			asyncStub = BullyGrpc.newStub(channels.get(channels.size()-1)); // TODO 1 stup x channel ??
-			System.out.println("[anunciaCoord] Channel: " + dest+"\n");
+			System.out.println("[anunciaCoord] Channel: " + dest);
 
 			asyncStub.anuncioCoordinacion(msg, new StreamObserver<OkMsg>() {
 				@Override

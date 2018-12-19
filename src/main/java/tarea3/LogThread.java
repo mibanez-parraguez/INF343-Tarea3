@@ -206,6 +206,7 @@ class LogThread implements Runnable {
       SimpleFormatter formatter = new SimpleFormatter();
       fh.setFormatter(formatter);
       logger.info(mensaje);
+      fh.close();
 
     } catch (SecurityException e) {
       System.out.println("[Log] Error al actualizar Log, host desconocido: ");
