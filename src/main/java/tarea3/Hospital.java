@@ -248,11 +248,11 @@ public class Hospital {
 			this.hay_coordinador = true;
 
 			//Soy coordinador y creo un thread que escucha los cambios desde las maquinas
-			Thread lt = new Thread(new LogThread( Hospital.MULTICAST_PORT, Hospital.COORDINADOR_ADDRESS, true));
-			lt.start();
+			new Thread(new LogThread( Hospital.MULTICAST_PORT, Hospital.COORDINADOR_ADDRESS, true)).start();
 
 			// Gane eleccion, asumo coordinacion
 			Doctor d = Hospital.staff.hazCoordinador(this.electionMsg.getIdCandidato());
+			new Thread(new LogThread( Hospital.COORDINADOR_PORT, Hospital.MULTICAST_ADDRESS, true, "Doctor " + d.id + " (" + d.nombre + ")" + " elegido como coordinador")).start();
 			this.reqServer.linkCoordinador(d);
 			Hospital.config.guardaCoordinador(); // (direccion)
 			this.mgmreq.destinoCoordinador(Hospital.config.extcoordinador_dir);
@@ -473,6 +473,7 @@ class BullyClient implements Runnable {
 			} catch (InterruptedException e){
 				System.out.println("[BullyClient] Error en comunicación - Exception");
 			}
+			// Anuncia termino del algoritmo del maton
 			new Thread(new LogThread( Hospital.MULTICAST_PORT, Hospital.hostname, false, Hospital.hostname + " - Fin del algoritmo del maton")).start();
 		}
 		else {
@@ -547,7 +548,6 @@ class BullyClient implements Runnable {
 			channels.add(ManagedChannelBuilder.forAddress(host, port).usePlaintext().build());
 			asyncStub = BullyGrpc.newStub(channels.get(channels.size()-1)); // TODO 1 stup x channel ??
 			System.out.println("[anunciaCoord] Channel: " + dest);
-
 			asyncStub.anuncioCoordinacion(msg, new StreamObserver<OkMsg>() {
 				@Override
 				public void onNext(OkMsg resp) {

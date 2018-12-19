@@ -8,11 +8,7 @@ pruebas/
 
 # Temp files
 *.kate-swp
-*.log
-*.log1
-*.log2
-*.log3
-*.log4
+*.log.*
 *.*.lck
 
 # Gradle

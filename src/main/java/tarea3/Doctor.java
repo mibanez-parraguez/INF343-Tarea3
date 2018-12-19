@@ -24,18 +24,18 @@ public class Doctor extends Empleado{
 	public boolean coordinador = false;
 	public boolean enEleccion = false;
 	public Coordinacion coordinacion = null;
-	
+
 	private Paciente[] pacientes = null; // Asume pacientes ordenados por id
 	private static Hospital.ConfigH config;
-	
+
 	public boolean esCoordinador(){
 		return this.coordinador;
 	}
-	
+
 	public String toString(){
 		return String.format("Doctor[%02d]: %s %s (estudios: %2d, exp: %2d, coordinador: %b)", this.id, this.nombre, this.apellido, this.estudios, this.experiencia, this.coordinador);
 	}
-	
+
 	public void asumeCoordinacion(Paciente[] pacientes, Hospital.ConfigH config) {
 		if(!this.esCoordinador()){
 			this.coordinacion = new Coordinacion(pacientes.length);
@@ -46,14 +46,16 @@ public class Doctor extends Empleado{
 	}
 
 	public int solicitaFicha(SolicitarMsg request){
-		// Coordinador recibe peticion por una ficha. 
+		// Coordinador recibe peticion por una ficha.
 		// Si esta desocupada, da acceso (return 1).
 		int id = request.getIdPaciente();
 		System.out.println("[DOC.solicitarFicha] ficha :" + id + ", locked: " + this.pacientes[id].locked); // DEBUG
 		if(this.pacientes[id].locked){
 			this.coordinacion.ponEnQueue(request);
+			new Thread(new LogThread( Hospital.MULTICAST_PORT, Hospital.hostname, false, request.getEmpleado().getCargo() + " " + request.getEmpleado().getId() + " esperando.")).start();
 			return 2;
 		}
+		new Thread(new LogThread( Hospital.MULTICAST_PORT, Hospital.hostname, false, "Acceso de " + request.getEmpleado().getCargo() + " " + request.getEmpleado().getId() + " a la ficha del paciente " + id)).start();
 		int id_req = request.getIdRequerimiento();
 		int hospital = request.getHospital();
 		this.lockPaciente(id, id_req, hospital);
@@ -84,7 +86,7 @@ public class Doctor extends Empleado{
 			msg.setStatus(1);
 			msg.setIdRequerimiento(id_req);
 			msg.setHospital(hospital);
-			
+
 			this.lockPaciente(id_paciente, id_req, hospital);
 			String dest = Doctor.config.getHospitalDir(hospital, Hospital.REQ);
 			this.daAcceso(dest, msg.build()); // Avisa al dueño (hospital).
@@ -99,8 +101,8 @@ public class Doctor extends Empleado{
 	}
 
 // diagnosticar / curar -> enfermedades
-// asignar / poner /completar -> tratamientos/procedimientos 
-// pedir / realizar -> examenes 
+// asignar / poner /completar -> tratamientos/procedimientos
+// pedir / realizar -> examenes
 // recetar / suministrar -> medicamentos.
 	public int hazModificacion(RequerimientoMsg request){
 		// Si el empleado esta autorizado para el cambio, se realiza la accion.
@@ -111,6 +113,7 @@ public class Doctor extends Empleado{
 		String op = request.getReqData().split(" ")[0];     // opcion / accion del requerimiento
 		String cont = request.getReqData().split(" ")[1]; // contenido de la accion.
 		Paciente p = this.pacientes[id];
+		new Thread(new LogThread( Hospital.MULTICAST_PORT, Hospital.hostname, false, request.getEmpleado().getCargo() + " " + request.getEmpleado().getId() + " realizando operacion (" + op + ") al paciente" + id)).start();
 		// Enfermedades
 		if(op.equals("diagnosticar")){
 			p.enfermedades.add(cont);
@@ -200,14 +203,14 @@ public class Doctor extends Empleado{
 			return false;
 		return true;
 	}
-	
+
 	private void lockPaciente(int id, int id_req, int hospital){
 		// Reserva ficha con datos para identificar requerimiento que la reservo.
 		this.pacientes[id].locked = true;
 		this.pacientes[id].id_req = id_req;
 		this.pacientes[id].hospital = hospital;
 	}
-	
+
 	private void unlockPaciente(int id){
 		// Unlock ;)
 		this.pacientes[id].locked = false;
@@ -227,7 +230,7 @@ public class Doctor extends Empleado{
 		channel = ManagedChannelBuilder.forAddress(host, port).usePlaintext().build();
 		asyncStub = ReqCoordinacionGrpc.newStub(channel);
 		logger.info("[permiteAcceso] Channel: " + dest);
-			
+
 		asyncStub.permiteAcceso(msg, new StreamObserver<Empty>() {
 			@Override
 			public void onNext(Empty resp) {
@@ -252,7 +255,7 @@ class Coordinacion {
 		public ArrayDeque<SolicitarMsg> medicos;
 		public ArrayDeque<SolicitarMsg> enfermeros;
 		public ArrayDeque<SolicitarMsg> paramedicos;
-		
+
 		PacienteQueues(){
 			this.medicos = new ArrayDeque<SolicitarMsg>();
 			this.enfermeros = new ArrayDeque<SolicitarMsg>();
@@ -260,13 +263,13 @@ class Coordinacion {
 		}
 	}
 	private List<PacienteQueues> queues;
-	
+
 	Coordinacion(int npacientes){
 		this.queues = new ArrayList<PacienteQueues>();
 		for (int i=0;i<npacientes;i++)
 			this.queues.add(new PacienteQueues()); // una cola por paciente.
 	}
-	
+
 	public void ponEnQueue(SolicitarMsg req){
 		// Requerimiento se pone en lista de espera segun cargo.
 		int id = req.getIdPaciente();
@@ -278,7 +281,7 @@ class Coordinacion {
 		if(cargo.equals("paramedico"))
 			this.queues.get(id).paramedicos.addLast(req);
 	}
-	
+
 	public SolicitarMsg getSiguiente(int id_paciente){
 		// Devuelve siguiente en lista de espera, priorizando por cargo.
 		//medicos
